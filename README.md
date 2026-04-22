@@ -64,10 +64,13 @@ This scaffold now includes a runnable local demo path:
 - `Completed` React + Vite ambient dashboard shell with waveform, transcript, chart, and trace views.
 - `Completed` Fastify WebSocket gateway with mocked real-time transcript, trace, chart, and metric events.
 - `Completed` Browser microphone capture and PCM streaming from the frontend to the gateway.
+- `Completed` Server-side PII redaction pass before agent extraction, with trace visibility for redaction events.
+- `Completed` Redacted finalized transcript display when PII is detected.
+- `Completed` Safety-focused trace retention so redaction and tool events are less likely to be pushed out by transcript noise.
 - `Completed` Starter agent extraction, ingestion normalization, worker entrypoint, and CDK async infrastructure scaffold.
 - `In Progress` Dependency installation and full workspace verification.
 - `In Progress` Deepgram live transcription wiring and end-to-end session lifecycle shape.
-- `Planned` PII redaction middleware, Vercel AI SDK orchestration, PostgreSQL persistence, PDF generation, and insurance pre-auth flow.
+- `Planned` Vercel AI SDK orchestration, PostgreSQL persistence, PDF generation, and insurance pre-auth flow.
 
 ### Run Current Stage
 

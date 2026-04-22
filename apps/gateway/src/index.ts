@@ -2,7 +2,7 @@ import Fastify, { type FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
 import { createExtractionFromTranscript } from '@auradent/agent-core';
-import type { ClientSocketMessage, RealtimeEvent } from '@auradent/shared';
+import { redactTranscriptPII, type ClientSocketMessage, type RealtimeEvent } from '@auradent/shared';
 import WebSocket from 'ws';
 
 type SocketMessage = string | Buffer | ArrayBuffer | Buffer[];
@@ -177,20 +177,22 @@ function startDemoSession({
 
     state.demoTimers.push(
       setTimeout(() => {
+        const finalRedaction = redactTranscriptPII(item.final);
         send({
           type: 'transcript.final',
           utteranceId: item.utteranceId,
           text: item.final,
+          redactedText: finalRedaction.matches.length > 0 ? finalRedaction.text : undefined,
           ts: new Date().toISOString(),
         });
 
         if (index === transcriptScript.length - 1) {
-          sendTrace('redaction.applied', 'PII scan complete. No identifiers forwarded to agent.', 0.98);
           emitStructuredFindings({
             send,
             sendTrace,
             sessionId: 'demo-session',
             transcript: transcriptScript.map((line) => line.final).join(' '),
+            utteranceId: item.utteranceId,
           });
 
           send({
@@ -277,21 +279,26 @@ function startLiveSession({
     const utteranceId = getUtteranceId(parsed, state);
     const confidence = alternative?.confidence;
     const ts = new Date().toISOString();
+    const finalRedaction = parsed.is_final ? redactTranscriptPII(transcript) : null;
 
     send(
       parsed.is_final
-        ? { type: 'transcript.final', utteranceId, text: transcript, ts }
+        ? {
+            type: 'transcript.final',
+            utteranceId,
+            text: transcript,
+            redactedText: finalRedaction && finalRedaction.matches.length > 0 ? finalRedaction.text : undefined,
+            ts,
+          }
         : { type: 'transcript.partial', utteranceId, text: transcript, ts },
     );
 
-    sendTrace(
-      parsed.is_final ? 'transcript.finalized' : 'transcript.interim',
-      parsed.is_final ? 'Deepgram finalized an utterance segment.' : 'Deepgram emitted an interim transcript update.',
-      confidence,
-    );
+    if (parsed.is_final) {
+      sendTrace('transcript.finalized', `Deepgram finalized utterance ${utteranceId}.`, confidence);
+    }
 
     if (parsed.is_final) {
-      emitStructuredFindings({ send, sendTrace, sessionId, transcript });
+      emitStructuredFindings({ send, sendTrace, sessionId, transcript, utteranceId });
     }
   });
 
@@ -327,17 +334,35 @@ function emitStructuredFindings({
   sendTrace,
   sessionId,
   transcript,
+  utteranceId,
 }: {
   send: (event: RealtimeEvent) => void;
   sendTrace: (step: string, detail: string, confidence?: number) => void;
   sessionId: string;
   transcript: string;
+  utteranceId: string;
 }) {
+  const redaction = redactTranscriptPII(transcript);
+
+  if (redaction.matches.length > 0) {
+    const summary = summarizeRedactions(redaction.matches);
+    sendTrace(
+      'redaction.applied',
+      `PII redacted for finalized utterance ${utteranceId} before agent handoff: ${summary}.`,
+      0.98,
+    );
+  }
+
   const extraction = createExtractionFromTranscript({
     sessionId,
     patientId: 'demo-patient',
-    transcript,
+    transcript: redaction.text,
   });
+
+  if (extraction.findings.length === 0) {
+    sendTrace('agent.noop', `No structured clinical finding extracted from utterance ${utteranceId}.`, 0.9);
+    return;
+  }
 
   sendTrace('tool.called', 'update_perio_chart invoked for extracted probing depth.', extraction.findings[0]?.confidence);
 
@@ -427,4 +452,20 @@ function safeParseJson<T>(value: string): T | null {
   } catch {
     return null;
   }
+}
+
+function summarizeRedactions(
+  matches: Array<{
+    entityType: string;
+  }>,
+) {
+  const counts = new Map<string, number>();
+
+  for (const match of matches) {
+    counts.set(match.entityType, (counts.get(match.entityType) ?? 0) + 1);
+  }
+
+  return Array.from(counts.entries())
+    .map(([entityType, count]) => `${entityType} x${count}`)
+    .join(', ');
 }

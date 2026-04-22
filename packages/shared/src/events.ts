@@ -2,7 +2,7 @@ export type RealtimeEvent =
   | { type: 'session.started'; sessionId: string; ts: string }
   | { type: 'audio.level'; level: number; ts: string }
   | { type: 'transcript.partial'; utteranceId: string; text: string; ts: string }
-  | { type: 'transcript.final'; utteranceId: string; text: string; ts: string }
+  | { type: 'transcript.final'; utteranceId: string; text: string; redactedText?: string; ts: string }
   | { type: 'trace.event'; step: string; detail: string; confidence?: number; ts: string }
   | { type: 'chart.finding.staged'; findingId: string; payload: unknown; ts: string }
   | { type: 'chart.finding.committed'; findingId: string; payload: unknown; ts: string }

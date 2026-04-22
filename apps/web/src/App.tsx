@@ -66,10 +66,18 @@ export default function App() {
           setTranscript((current) => upsertTranscript(current, event.utteranceId, event.text, false));
           break;
         case 'transcript.final':
-          setTranscript((current) => upsertTranscript(current, event.utteranceId, event.text, true));
+          setTranscript((current) =>
+            upsertTranscript(current, event.utteranceId, event.redactedText ?? event.text, true),
+          );
           break;
         case 'trace.event':
-          setTraceEvents((current) => [...current.slice(-9), { detail: event.detail, step: event.step, confidence: event.confidence }]);
+          setTraceEvents((current) =>
+            appendTraceEvent(current, {
+              detail: event.detail,
+              step: event.step,
+              confidence: event.confidence,
+            }),
+          );
           break;
         case 'chart.finding.staged':
         case 'chart.finding.committed':
@@ -399,4 +407,31 @@ function computeAudioLevel(floatSamples: Float32Array) {
   }
 
   return Math.min(1, Math.sqrt(sum / floatSamples.length) * 6);
+}
+
+function appendTraceEvent(
+  current: Array<{ detail: string; step: string; confidence?: number }>,
+  next: { detail: string; step: string; confidence?: number },
+) {
+  const importantSteps = new Set([
+    'redaction.applied',
+    'tool.called',
+    'schema.validated',
+    'agent.noop',
+    'deepgram.error',
+    'deepgram.connected',
+  ]);
+
+  const maxItems = 16;
+  const combined = [...current, next];
+  if (combined.length <= maxItems) {
+    return combined;
+  }
+
+  const firstRemovableIndex = combined.findIndex((event) => !importantSteps.has(event.step));
+  if (firstRemovableIndex >= 0) {
+    return combined.filter((_, index) => index !== firstRemovableIndex);
+  }
+
+  return combined.slice(-maxItems);
 }

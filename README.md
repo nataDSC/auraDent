@@ -67,6 +67,7 @@ This scaffold now includes a runnable local demo path:
 - `Completed` Server-side PII redaction pass before agent extraction, with trace visibility for redaction events.
 - `Completed` Redacted finalized transcript display when PII is detected.
 - `Completed` Safety-focused trace retention so redaction and tool events are less likely to be pushed out by transcript noise.
+- `Completed` Visible agent lifecycle trace with extraction mode, handoff, tool, and completion events.
 - `Completed` Starter ingestion normalization, worker entrypoint, and CDK async infrastructure scaffold.
 - `In Progress` Dependency installation and full workspace verification.
 - `In Progress` Deepgram live transcription wiring and end-to-end session lifecycle shape.

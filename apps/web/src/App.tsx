@@ -23,6 +23,7 @@ const gatewayUrl = import.meta.env.VITE_GATEWAY_URL ?? 'ws://localhost:8787/real
 export default function App() {
   const [socketStatus, setSocketStatus] = useState<SocketStatus>('connecting');
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
+  const [agentMode, setAgentMode] = useState<'unknown' | 'ai-sdk' | 'heuristic'>('unknown');
   const [transcript, setTranscript] = useState<TranscriptLine[]>([]);
   const [traceEvents, setTraceEvents] = useState<Array<{ detail: string; step: string; confidence?: number }>>([]);
   const [findings, setFindings] = useState<FindingCard[]>([]);
@@ -71,6 +72,9 @@ export default function App() {
           );
           break;
         case 'trace.event':
+          if (event.step === 'agent.mode') {
+            setAgentMode(resolveAgentMode(event.detail));
+          }
           setTraceEvents((current) =>
             appendTraceEvent(current, {
               detail: event.detail,
@@ -248,6 +252,7 @@ export default function App() {
     setTraceEvents([]);
     setFindings([]);
     setMetrics({});
+    setAgentMode('unknown');
   }
 
   return (
@@ -351,6 +356,10 @@ export default function App() {
               <p className="eyebrow">Trace View</p>
               <h2>Agent Activity</h2>
             </div>
+            <div className={`mode-pill mode-${agentMode}`}>
+              <span>mode</span>
+              <strong>{agentMode}</strong>
+            </div>
           </div>
 
           <div className="trace-list">
@@ -414,19 +423,35 @@ function appendTraceEvent(
   next: { detail: string; step: string; confidence?: number },
 ) {
   const importantSteps = new Set([
+    'agent.handoff',
+    'agent.context',
     'redaction.applied',
     'tool.called',
     'tool.result',
     'schema.validated',
+    'agent.mode',
     'agent.noop',
+    'agent.completed',
     'agent.started',
     'agent.fallback',
     'agent.error',
     'deepgram.error',
     'deepgram.connected',
   ]);
+  const stickySteps = new Set([
+    'redaction.applied',
+    'agent.handoff',
+    'agent.mode',
+    'tool.called',
+    'tool.result',
+    'schema.validated',
+    'agent.completed',
+    'agent.fallback',
+    'agent.error',
+    'deepgram.error',
+  ]);
 
-  const maxItems = 16;
+  const maxItems = 32;
   const combined = [...current, next];
   if (combined.length <= maxItems) {
     return combined;
@@ -437,5 +462,23 @@ function appendTraceEvent(
     return combined.filter((_, index) => index !== firstRemovableIndex);
   }
 
+  const firstNonStickyImportantIndex = combined.findIndex((event) => !stickySteps.has(event.step));
+  if (firstNonStickyImportantIndex >= 0) {
+    return combined.filter((_, index) => index !== firstNonStickyImportantIndex);
+  }
+
   return combined.slice(-maxItems);
+}
+
+function resolveAgentMode(detail: string): 'unknown' | 'ai-sdk' | 'heuristic' {
+  const normalized = detail.toLowerCase();
+  if (normalized.includes('ai-sdk')) {
+    return 'ai-sdk';
+  }
+
+  if (normalized.includes('heuristic')) {
+    return 'heuristic';
+  }
+
+  return 'unknown';
 }

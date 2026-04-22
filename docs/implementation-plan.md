@@ -49,7 +49,7 @@ Status legend:
 - `In Progress` Replace heuristic extraction with Vercel AI SDK orchestration.
 - `In Progress` Add typed practice-management tool definitions and tool execution flow.
 - `Completed` Add trace emission for redaction outcomes.
-- `In Progress` Add trace emission for tool activity and richer validation outcomes.
+- `Completed` Add trace emission for tool activity, extraction mode, handoff, and richer validation outcomes.
 
 ### Stage 5: Ingestion and persistence preparation
 

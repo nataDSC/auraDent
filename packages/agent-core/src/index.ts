@@ -1,4 +1,4 @@
-import { generateText, Output, stepCountIs, tool, zodSchema, type DeepPartial } from 'ai';
+import { generateObject, generateText, tool, zodSchema } from 'ai';
 import {
   AgentExtractionSchema,
   PerioFindingSchema,
@@ -55,6 +55,11 @@ export async function runClinicalAgent(input: ExtractionInput): Promise<Clinical
     {
       step: 'agent.started',
       detail: `AI SDK agent started for utterance ${input.utteranceId}.`,
+      confidence: 0.98,
+    },
+    {
+      step: 'agent.mode',
+      detail: 'Extraction mode: ai-sdk.',
       confidence: 0.98,
     },
   ];
@@ -127,21 +132,14 @@ export async function runClinicalAgent(input: ExtractionInput): Promise<Clinical
       }),
     };
 
-    const { experimental_output } = await generateText<
-      typeof practiceTools,
-      AgentExtraction,
-      DeepPartial<AgentExtraction>
-    >({
+    const contextResult = await generateText<typeof practiceTools>({
       model: process.env.AURADENT_AGENT_MODEL ?? 'openai/gpt-4.1-mini',
       system: [
-        'You are the AuraDent clinical extraction agent.',
+        'You are the AuraDent clinical context agent.',
         'You receive a redacted transcript utterance from a dental exam.',
-        'Only extract facts explicitly stated in the transcript.',
-        'Do not infer missing tooth numbers or measurements.',
-        'If the utterance does not contain a structured clinical finding, return an empty findings array.',
         'Always call check_patient_history once for context.',
-        'If you extract findings, call update_perio_chart with the same findings before returning the final object.',
-        'Always preserve the provided sessionId, patientId, and sourceUtteranceId values exactly.',
+        'Summarize only the clinically relevant context from the transcript and tool result.',
+        'Do not invent measurements or findings.',
       ].join(' '),
       prompt: [
         `sessionId: ${input.sessionId}`,
@@ -150,14 +148,38 @@ export async function runClinicalAgent(input: ExtractionInput): Promise<Clinical
         `transcript: ${input.transcript}`,
       ].join('\n'),
       tools: practiceTools,
-      activeTools: ['check_patient_history', 'update_perio_chart'],
-      stopWhen: stepCountIs(5),
-      experimental_output: Output.object({
-        schema: zodSchema(AgentExtractionSchema),
-      }),
+      activeTools: ['check_patient_history'],
     });
 
-    const generated = experimental_output as AgentExtraction;
+    traceEvents.push({
+      step: 'agent.context',
+      detail: 'AI SDK context pass completed before structured extraction.',
+      confidence: 0.96,
+    });
+
+    const { object } = await generateObject({
+      model: process.env.AURADENT_AGENT_MODEL ?? 'openai/gpt-4.1-mini',
+      system: [
+        'You are the AuraDent clinical extraction agent.',
+        'You receive a redacted transcript utterance and a short context summary.',
+        'Only extract facts explicitly stated in the transcript.',
+        'Do not infer missing tooth numbers or measurements.',
+        'If the utterance does not contain a structured clinical finding, return an empty findings array.',
+        'Always preserve the provided sessionId, patientId, and sourceUtteranceId values exactly.',
+      ].join(' '),
+      prompt: [
+        `sessionId: ${input.sessionId}`,
+        `patientId: ${input.patientId}`,
+        `sourceUtteranceId: ${input.utteranceId}`,
+        `transcript: ${input.transcript}`,
+        `contextSummary: ${contextResult.text || 'No additional context.'}`,
+      ].join('\n'),
+      schema: zodSchema(AgentExtractionSchema),
+      schemaName: 'ClinicalExtraction',
+      schemaDescription: 'Validated structured extraction for periodontal chart updates.',
+    });
+
+    const generated = object as AgentExtraction;
     const extraction = AgentExtractionSchema.parse({
       ...generated,
       sessionId: input.sessionId,
@@ -174,11 +196,27 @@ export async function runClinicalAgent(input: ExtractionInput): Promise<Clinical
       confidence: 0.98,
     });
 
+    if (extraction.findings.length > 0) {
+      await practiceTools.update_perio_chart.execute?.({
+        sessionId: input.sessionId,
+        findings: extraction.findings,
+      }, {
+        toolCallId: `tool-update-perio-chart-${input.utteranceId}`,
+        messages: [],
+      });
+    }
+
     if (extraction.findings.length === 0) {
       traceEvents.push({
         step: 'agent.noop',
         detail: `No structured clinical finding extracted from utterance ${input.utteranceId}.`,
         confidence: 0.9,
+      });
+    } else {
+      traceEvents.push({
+        step: 'agent.completed',
+        detail: `AI SDK extraction produced ${extraction.findings.length} structured finding${extraction.findings.length === 1 ? '' : 's'}.`,
+        confidence: extraction.findings[0]?.confidence,
       });
     }
 
@@ -211,6 +249,12 @@ function runHeuristicFallback(
   const extraction = createHeuristicExtraction(input);
 
   traceEvents.push({
+    step: 'agent.mode',
+    detail: 'Extraction mode: heuristic fallback.',
+    confidence: 0.7,
+  });
+
+  traceEvents.push({
     step: 'agent.fallback',
     detail,
     confidence: 0.65,
@@ -232,6 +276,11 @@ function runHeuristicFallback(
       step: 'schema.validated',
       detail: 'Heuristic fallback output validated against AgentExtractionSchema.',
       confidence: 0.96,
+    });
+    traceEvents.push({
+      step: 'agent.completed',
+      detail: `Heuristic fallback produced ${extraction.findings.length} structured finding${extraction.findings.length === 1 ? '' : 's'}.`,
+      confidence: extraction.findings[0]?.confidence,
     });
   }
 

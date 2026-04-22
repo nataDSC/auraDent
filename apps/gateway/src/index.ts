@@ -14,6 +14,10 @@ type GatewaySessionState = {
   lastAudioAt?: number;
   transcriptCounter: number;
   demoTimers: NodeJS.Timeout[];
+  finalizedUtterances: Array<{
+    utteranceId: string;
+    text: string;
+  }>;
 };
 
 type DeepgramTranscriptMessage = {
@@ -48,6 +52,7 @@ app.register(async (instance) => {
     const state: GatewaySessionState = {
       transcriptCounter: 0,
       demoTimers: [],
+      finalizedUtterances: [],
     };
 
     const send = (event: RealtimeEvent) => socket.send(JSON.stringify(event));
@@ -187,13 +192,15 @@ function startDemoSession({
           redactedText: finalRedaction.matches.length > 0 ? finalRedaction.text : undefined,
           ts: new Date().toISOString(),
         });
+        recordFinalUtterance(state, item.utteranceId, item.final);
 
         if (index === transcriptScript.length - 1) {
+          const transcriptWindow = getTranscriptWindow(state, item.utteranceId);
           void emitStructuredFindings({
             send,
             sendTrace,
             sessionId: 'demo-session',
-            transcript: transcriptScript.map((line) => line.final).join(' '),
+            transcript: transcriptWindow,
             utteranceId: item.utteranceId,
           }).catch((error) => {
             request.log.error({ error }, 'Failed to emit structured demo findings');
@@ -299,11 +306,13 @@ function startLiveSession({
     );
 
     if (parsed.is_final) {
+      recordFinalUtterance(state, utteranceId, transcript);
       sendTrace('transcript.finalized', `Deepgram finalized utterance ${utteranceId}.`, confidence);
     }
 
     if (parsed.is_final) {
-      void emitStructuredFindings({ send, sendTrace, sessionId, transcript, utteranceId }).catch((error) => {
+      const transcriptWindow = getTranscriptWindow(state, utteranceId);
+      void emitStructuredFindings({ send, sendTrace, sessionId, transcript: transcriptWindow, utteranceId }).catch((error) => {
         request.log.error({ error }, 'Failed to emit structured live findings');
         sendTrace('agent.error', `Clinical agent failed for utterance ${utteranceId}.`, 0.3);
       });
@@ -360,6 +369,8 @@ async function emitStructuredFindings({
       0.98,
     );
   }
+
+  sendTrace('agent.handoff', `Handing finalized utterance ${utteranceId} to the clinical agent.`, 0.97);
 
   const result = await runClinicalAgent({
     sessionId,
@@ -419,6 +430,7 @@ function stopDemoSession(state: GatewaySessionState) {
   state.audioInterval = undefined;
   state.demoTimers.forEach((timer) => clearTimeout(timer));
   state.demoTimers = [];
+  state.finalizedUtterances = [];
 }
 
 function getUtteranceId(message: DeepgramTranscriptMessage, state: GatewaySessionState) {
@@ -460,6 +472,25 @@ function safeParseJson<T>(value: string): T | null {
   } catch {
     return null;
   }
+}
+
+function recordFinalUtterance(state: GatewaySessionState, utteranceId: string, text: string) {
+  state.finalizedUtterances = [
+    ...state.finalizedUtterances.filter((entry) => entry.utteranceId !== utteranceId),
+    { utteranceId, text },
+  ].slice(-4);
+}
+
+function getTranscriptWindow(state: GatewaySessionState, utteranceId: string) {
+  const currentIndex = state.finalizedUtterances.findIndex((entry) => entry.utteranceId === utteranceId);
+  if (currentIndex < 0) {
+    return '';
+  }
+
+  return state.finalizedUtterances
+    .slice(Math.max(0, currentIndex - 2), currentIndex + 1)
+    .map((entry) => entry.text)
+    .join(' ');
 }
 
 function summarizeRedactions(

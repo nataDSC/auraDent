@@ -25,6 +25,11 @@ type RedactionRule = {
 
 const REDACTION_RULES: RedactionRule[] = [
   {
+    entityType: 'phone',
+    placeholder: '[PHONE]',
+    pattern: /\b(?:phone(?:\s+number)?|number)\b([\s,:-]*)(?:\+?1[\s.-]*)?(?:\(?\d[\d\s().-]{5,20}\d)\b/gi,
+  },
+  {
     entityType: 'ssn',
     placeholder: '[SSN]',
     pattern: /\b\d{3}-\d{2}-\d{4}\b/g,
@@ -54,7 +59,7 @@ const REDACTION_RULES: RedactionRule[] = [
   {
     entityType: 'patient_name',
     placeholder: '[PATIENT_NAME]',
-    pattern: /\b(?:patient|pt)\s+(?:name\s+is\s+)?([A-Za-z]+(?:\s+[A-Za-z]+){1,2})\b/gi,
+    pattern: /\b(?:patient|pt)(?:'s)?\s+(?:name\s+is\s+|is\s+)?([A-Za-z]+(?:\s+[A-Za-z]+){1,2})\b/gi,
   },
 ];
 
@@ -73,6 +78,10 @@ export function redactTranscriptPII(text: string): RedactionResult {
 
       if (rule.entityType === 'patient_name' && capturedName) {
         return match.replace(capturedName, rule.placeholder);
+      }
+
+      if (rule.entityType === 'phone' && /(?:phone|phone number)/i.test(match)) {
+        return match.replace(/(?:\+?1[\s.-]*)?(?:\(?\d[\d\s().-]{5,20}\d)\b/, rule.placeholder);
       }
 
       return rule.placeholder;

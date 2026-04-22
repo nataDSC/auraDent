@@ -38,7 +38,8 @@ Status legend:
 - `Completed` Add browser audio chunk ingestion.
 - `In Progress` Add Deepgram streaming integration.
 - `Planned` Add transcript revision reconciliation for provider partials and finals.
-- `Planned` Add session-close payload assembly and queue publishing.
+- `Completed` Add session-close payload assembly with redacted transcript, structured findings, trace, and metrics capture.
+- `In Progress` Add queue publishing from the gateway into the async backend.
 
 ### Stage 4: Agentic core and safety
 
@@ -66,6 +67,7 @@ Status legend:
 - `Completed` Create the AWS CDK package boundary and stack entry point.
 - `Completed` Add SQS, DLQ, and queue-to-worker infrastructure scaffold in CDK.
 - `In Progress` Define the end-to-end session-close processing shape across gateway, queue, worker, and storage.
+- `Completed` Define and emit the session-close payload contract from the gateway into a local publisher stub.
 - `Planned` Replace the inline CDK Lambda placeholder with the built `apps/worker` artifact.
 - `Planned` Add post-op PDF generation.
 - `Planned` Add mock insurance pre-authorization flow.
@@ -122,12 +124,14 @@ Deliverables:
 - PII redaction middleware,
 - outbound event broadcaster,
 - session-close payload builder.
+- local queue publisher stub for async wrap-up.
 
 Exit criteria:
 
 - microphone audio can stream to Deepgram,
 - partial and final transcript events return to the UI,
 - redacted transcript text can be forwarded into the agent layer.
+- a stopped session can produce a redacted closeout payload with findings, trace, and metrics.
 
 ### 3. Agentic core
 
@@ -170,6 +174,7 @@ Deliverables:
 
 - SQS queue and DLQ definitions,
 - Lambda worker entry point,
+- gateway session-close payload assembly and publisher boundary,
 - post-op PDF generation stub,
 - mock insurance pre-auth client,
 - final persistence integration contract.

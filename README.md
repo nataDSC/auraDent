@@ -69,9 +69,11 @@ This scaffold now includes a runnable local demo path:
 - `Completed` Safety-focused trace retention so redaction and tool events are less likely to be pushed out by transcript noise.
 - `Completed` Visible agent lifecycle trace with extraction mode, handoff, tool, and completion events.
 - `Completed` Starter ingestion normalization, worker entrypoint, and CDK async infrastructure scaffold.
+- `Completed` Session-close payload assembly in the gateway, including redacted final transcript, structured findings, trace artifacts, and metrics capture.
 - `In Progress` Dependency installation and full workspace verification.
 - `In Progress` Deepgram live transcription wiring and end-to-end session lifecycle shape.
 - `In Progress` Vercel AI SDK orchestration with mock practice-management tools and heuristic fallback.
+- `In Progress` Queue publishing from the gateway to the async backend, with a local publisher stub and SQS-ready env shape.
 - `Planned` PostgreSQL persistence, PDF generation, and insurance pre-auth flow.
 
 ### Run Current Stage
@@ -106,6 +108,7 @@ export DEEPGRAM_API_KEY=your_key_here
 export DEEPGRAM_MODEL=nova-3
 export AI_GATEWAY_API_KEY=your_key_here
 export AURADENT_AGENT_MODEL=openai/gpt-4.1-mini
+export AURADENT_SESSION_CLOSE_QUEUE_URL=your_queue_url_here
 npm run dev:gateway
 ```
 
@@ -156,8 +159,11 @@ export DEEPGRAM_API_KEY=your_key_here
 export DEEPGRAM_MODEL=nova-3
 export AI_GATEWAY_API_KEY=your_key_here
 export AURADENT_AGENT_MODEL=openai/gpt-4.1-mini
+export AURADENT_SESSION_CLOSE_QUEUE_URL=your_queue_url_here
 npm run dev:gateway
 ```
+
+If `AURADENT_SESSION_CLOSE_QUEUE_URL` is unset, the gateway logs the full session-close payload locally on `session.stop`. If it is set, the gateway currently logs an SQS-ready publish message and preserves the queue contract while the real AWS SDK send step is still being wired.
 
 ## Key Deliverables In This Repo
 

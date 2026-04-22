@@ -2,7 +2,12 @@ import Fastify, { type FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
 import { runClinicalAgent } from '@auradent/agent-core';
-import { redactTranscriptPII, type ClientSocketMessage, type RealtimeEvent } from '@auradent/shared';
+import {
+  redactTranscriptPII,
+  type ClientSocketMessage,
+  type RealtimeEvent,
+  type SessionClosePayload,
+} from '@auradent/shared';
 import WebSocket from 'ws';
 
 type SocketMessage = string | Buffer | ArrayBuffer | Buffer[];
@@ -17,7 +22,31 @@ type GatewaySessionState = {
   finalizedUtterances: Array<{
     utteranceId: string;
     text: string;
+    redactedText?: string;
   }>;
+  traceEvents: Array<{
+    step: string;
+    detail: string;
+    confidence?: number;
+    ts: string;
+  }>;
+  metrics: Array<{
+    name: string;
+    value: number;
+    unit: string;
+    ts: string;
+  }>;
+  findings: SessionClosePayload['structuredFindings'];
+};
+
+type PersistedFindingPayload = {
+  label: string;
+  detail: string;
+  toothNumber: number;
+  probingDepthMm?: number;
+  bleedingOnProbing?: boolean;
+  confidence: number;
+  sourceUtteranceId: string;
 };
 
 type DeepgramTranscriptMessage = {
@@ -53,9 +82,58 @@ app.register(async (instance) => {
       transcriptCounter: 0,
       demoTimers: [],
       finalizedUtterances: [],
+      traceEvents: [],
+      metrics: [],
+      findings: [],
     };
 
-    const send = (event: RealtimeEvent) => socket.send(JSON.stringify(event));
+    const send = (event: RealtimeEvent) => {
+      if (event.type === 'trace.event') {
+        state.traceEvents.push({
+          step: event.step,
+          detail: event.detail,
+          confidence: event.confidence,
+          ts: event.ts,
+        });
+      }
+
+      if (event.type === 'metric') {
+        state.metrics.push({
+          name: event.name,
+          value: event.value,
+          unit: event.unit,
+          ts: event.ts,
+        });
+      }
+
+      if (event.type === 'chart.finding.staged' || event.type === 'chart.finding.committed') {
+        const payload = event.payload as {
+          sourceUtteranceId?: string;
+          toothNumber?: number;
+          probingDepthMm?: number;
+          bleedingOnProbing?: boolean;
+          confidence?: number;
+        };
+
+        if (typeof payload.toothNumber === 'number') {
+          state.findings = [
+            ...state.findings.filter((finding) =>
+              !(finding.sourceUtteranceId === payload.sourceUtteranceId && finding.toothNumber === payload.toothNumber),
+            ),
+            {
+              toothNumber: payload.toothNumber,
+              probingDepthMm: payload.probingDepthMm,
+              bleedingOnProbing: payload.bleedingOnProbing,
+              confidence: payload.confidence ?? 0.9,
+              sourceUtteranceId: payload.sourceUtteranceId ?? 'unknown',
+            },
+          ];
+        }
+      }
+
+      socket.send(JSON.stringify(event));
+    };
+
     const sendTrace = (step: string, detail: string, confidence?: number) =>
       send({
         type: 'trace.event',
@@ -90,7 +168,7 @@ app.register(async (instance) => {
 
         if (payload.type === 'session.start') {
           teardownSession(state);
-          state.transcriptCounter = 0;
+          resetSessionArtifacts(state);
 
           if (payload.mode === 'live' && payload.audio?.sampleRate && process.env.DEEPGRAM_API_KEY) {
             startLiveSession({
@@ -111,6 +189,12 @@ app.register(async (instance) => {
         if (payload.type === 'session.stop') {
           stopDemoSession(state);
           finalizeDeepgram(state);
+          await publishSessionClose({
+            request,
+            sendTrace,
+            state,
+            sessionId,
+          });
           send({
             type: 'session.closed',
             sessionId,
@@ -400,13 +484,20 @@ async function emitStructuredFindings({
 
   result.extraction.findings.forEach((finding, findingIndex) => {
     const findingId = `${finding.toothNumber}-${findingIndex}`;
+    const payload: PersistedFindingPayload = {
+      label: `Tooth #${finding.toothNumber}`,
+      detail: `${finding.probingDepthMm ?? 'N/A'}mm pocket${finding.bleedingOnProbing ? ' • BOP' : ''}`,
+      toothNumber: finding.toothNumber,
+      probingDepthMm: finding.probingDepthMm,
+      bleedingOnProbing: finding.bleedingOnProbing,
+      confidence: finding.confidence,
+      sourceUtteranceId: finding.sourceUtteranceId,
+    };
+
     send({
       type: 'chart.finding.staged',
       findingId,
-      payload: {
-        label: `Tooth #${finding.toothNumber}`,
-        detail: `${finding.probingDepthMm ?? 'N/A'}mm pocket${finding.bleedingOnProbing ? ' • BOP' : ''}`,
-      },
+      payload,
       ts: new Date().toISOString(),
     });
   });
@@ -441,7 +532,14 @@ function stopDemoSession(state: GatewaySessionState) {
   state.audioInterval = undefined;
   state.demoTimers.forEach((timer) => clearTimeout(timer));
   state.demoTimers = [];
+}
+
+function resetSessionArtifacts(state: GatewaySessionState) {
+  state.transcriptCounter = 0;
   state.finalizedUtterances = [];
+  state.traceEvents = [];
+  state.metrics = [];
+  state.findings = [];
 }
 
 function getUtteranceId(message: DeepgramTranscriptMessage, state: GatewaySessionState) {
@@ -486,9 +584,14 @@ function safeParseJson<T>(value: string): T | null {
 }
 
 function recordFinalUtterance(state: GatewaySessionState, utteranceId: string, text: string) {
+  const redaction = redactTranscriptPII(text);
   state.finalizedUtterances = [
     ...state.finalizedUtterances.filter((entry) => entry.utteranceId !== utteranceId),
-    { utteranceId, text },
+    {
+      utteranceId,
+      text,
+      redactedText: redaction.matches.length > 0 ? redaction.text : undefined,
+    },
   ].slice(-4);
 }
 
@@ -518,4 +621,70 @@ function summarizeRedactions(
   return Array.from(counts.entries())
     .map(([entityType, count]) => `${entityType} x${count}`)
     .join(', ');
+}
+
+async function publishSessionClose({
+  request,
+  sendTrace,
+  state,
+  sessionId,
+}: {
+  request: FastifyRequest;
+  sendTrace: (step: string, detail: string, confidence?: number) => void;
+  state: GatewaySessionState;
+  sessionId: string;
+}) {
+  const payload: SessionClosePayload = {
+    sessionId,
+    patientId: 'demo-patient',
+    closedAt: new Date().toISOString(),
+    transcript: {
+      finalText: state.finalizedUtterances.map((entry) => entry.redactedText ?? entry.text).join(' '),
+    },
+    structuredFindings: state.findings,
+    artifacts: {
+      trace: state.traceEvents,
+      metrics: state.metrics,
+    },
+  };
+
+  const publisher = createSessionClosePublisher();
+  try {
+    await publisher.publish(payload);
+    sendTrace('session.wrapup.enqueued', 'Session close payload published for async processing.', 0.97);
+  } catch (error) {
+    request.log.error({ error }, 'Failed to publish session close payload');
+    sendTrace('session.wrapup.error', 'Failed to publish session close payload for async processing.', 0.3);
+  }
+}
+
+function createSessionClosePublisher() {
+  const queueUrl = process.env.AURADENT_SESSION_CLOSE_QUEUE_URL;
+
+  return {
+    publish: async (payload: SessionClosePayload) => {
+      if (queueUrl) {
+        // SQS integration is intentionally stubbed until AWS credentials and SDK wiring are added.
+        console.log(
+          JSON.stringify({
+            level: 'info',
+            message: 'Session close payload ready for SQS publish',
+            queueUrl,
+            sessionId: payload.sessionId,
+            findings: payload.structuredFindings.length,
+          }),
+        );
+        return;
+      }
+
+      console.log(
+        JSON.stringify({
+          level: 'info',
+          message: 'Session close payload published locally',
+          sessionId: payload.sessionId,
+          payload,
+        }),
+      );
+    },
+  };
 }

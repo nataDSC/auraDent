@@ -48,13 +48,13 @@ This scaffold now includes a runnable local demo path:
 - `apps/web` uses React + Vite + Framer Motion.
 - `apps/gateway` uses Fastify + WebSocket and emits mocked transcript, trace, and chart events.
 - `packages/shared` provides typed event contracts and Zod schemas.
-- `packages/agent-core` includes a starter extraction function for perio findings.
+- `packages/agent-core` includes a tool-driven AI SDK clinical agent with heuristic fallback.
 - `apps/worker` and `infra/aws` provide the Lambda and CDK starting points for async processing.
 
 ### Suggested next steps
 
 1. Replace the mocked gateway transcript flow with live Deepgram streaming.
-2. Replace heuristic extraction in `packages/agent-core` with Vercel AI SDK orchestration and real tools.
+2. Replace the remaining heuristic fallback in `packages/agent-core` with a fully provider-backed agent path.
 3. Wire PostgreSQL persistence into `packages/ingestion` and `apps/worker`.
 4. Replace the inline CDK Lambda with a deployed worker artifact.
 
@@ -67,10 +67,11 @@ This scaffold now includes a runnable local demo path:
 - `Completed` Server-side PII redaction pass before agent extraction, with trace visibility for redaction events.
 - `Completed` Redacted finalized transcript display when PII is detected.
 - `Completed` Safety-focused trace retention so redaction and tool events are less likely to be pushed out by transcript noise.
-- `Completed` Starter agent extraction, ingestion normalization, worker entrypoint, and CDK async infrastructure scaffold.
+- `Completed` Starter ingestion normalization, worker entrypoint, and CDK async infrastructure scaffold.
 - `In Progress` Dependency installation and full workspace verification.
 - `In Progress` Deepgram live transcription wiring and end-to-end session lifecycle shape.
-- `Planned` Vercel AI SDK orchestration, PostgreSQL persistence, PDF generation, and insurance pre-auth flow.
+- `In Progress` Vercel AI SDK orchestration with mock practice-management tools and heuristic fallback.
+- `Planned` PostgreSQL persistence, PDF generation, and insurance pre-auth flow.
 
 ### Run Current Stage
 
@@ -102,6 +103,8 @@ To run the live microphone stage instead of demo mode:
 ```bash
 export DEEPGRAM_API_KEY=your_key_here
 export DEEPGRAM_MODEL=nova-3
+export AI_GATEWAY_API_KEY=your_key_here
+export AURADENT_AGENT_MODEL=openai/gpt-4.1-mini
 npm run dev:gateway
 ```
 
@@ -150,6 +153,8 @@ For live transcription, copy from [.env.example](/Users/nataliep/Documents/New%2
 ```bash
 export DEEPGRAM_API_KEY=your_key_here
 export DEEPGRAM_MODEL=nova-3
+export AI_GATEWAY_API_KEY=your_key_here
+export AURADENT_AGENT_MODEL=openai/gpt-4.1-mini
 npm run dev:gateway
 ```
 

@@ -1,7 +1,7 @@
 import Fastify, { type FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
-import { createExtractionFromTranscript } from '@auradent/agent-core';
+import { runClinicalAgent } from '@auradent/agent-core';
 import { redactTranscriptPII, type ClientSocketMessage, type RealtimeEvent } from '@auradent/shared';
 import WebSocket from 'ws';
 
@@ -99,7 +99,7 @@ app.register(async (instance) => {
             return;
           }
 
-          startDemoSession({ send, sendTrace, state, sessionId });
+          startDemoSession({ request, send, sendTrace, state, sessionId });
           return;
         }
 
@@ -129,10 +129,12 @@ await app.listen({ port, host: '0.0.0.0' });
 app.log.info(`AuraDent gateway listening on ${port}`);
 
 function startDemoSession({
+  request,
   send,
   sendTrace,
   state,
 }: {
+  request: FastifyRequest;
   send: (event: RealtimeEvent) => void;
   sendTrace: (step: string, detail: string, confidence?: number) => void;
   state: GatewaySessionState;
@@ -187,12 +189,15 @@ function startDemoSession({
         });
 
         if (index === transcriptScript.length - 1) {
-          emitStructuredFindings({
+          void emitStructuredFindings({
             send,
             sendTrace,
             sessionId: 'demo-session',
             transcript: transcriptScript.map((line) => line.final).join(' '),
             utteranceId: item.utteranceId,
+          }).catch((error) => {
+            request.log.error({ error }, 'Failed to emit structured demo findings');
+            sendTrace('agent.error', 'Clinical agent failed during demo extraction.', 0.3);
           });
 
           send({
@@ -298,7 +303,10 @@ function startLiveSession({
     }
 
     if (parsed.is_final) {
-      emitStructuredFindings({ send, sendTrace, sessionId, transcript, utteranceId });
+      void emitStructuredFindings({ send, sendTrace, sessionId, transcript, utteranceId }).catch((error) => {
+        request.log.error({ error }, 'Failed to emit structured live findings');
+        sendTrace('agent.error', `Clinical agent failed for utterance ${utteranceId}.`, 0.3);
+      });
     }
   });
 
@@ -329,7 +337,7 @@ function forwardAudioChunk(state: GatewaySessionState, raw: SocketMessage) {
   state.deepgramSocket.send(chunk);
 }
 
-function emitStructuredFindings({
+async function emitStructuredFindings({
   send,
   sendTrace,
   sessionId,
@@ -353,20 +361,22 @@ function emitStructuredFindings({
     );
   }
 
-  const extraction = createExtractionFromTranscript({
+  const result = await runClinicalAgent({
     sessionId,
     patientId: 'demo-patient',
     transcript: redaction.text,
+    utteranceId,
   });
 
-  if (extraction.findings.length === 0) {
-    sendTrace('agent.noop', `No structured clinical finding extracted from utterance ${utteranceId}.`, 0.9);
+  for (const traceEvent of result.traceEvents) {
+    sendTrace(traceEvent.step, traceEvent.detail, traceEvent.confidence);
+  }
+
+  if (result.extraction.findings.length === 0) {
     return;
   }
 
-  sendTrace('tool.called', 'update_perio_chart invoked for extracted probing depth.', extraction.findings[0]?.confidence);
-
-  extraction.findings.forEach((finding, findingIndex) => {
+  result.extraction.findings.forEach((finding, findingIndex) => {
     const findingId = `${finding.toothNumber}-${findingIndex}`;
     send({
       type: 'chart.finding.staged',
@@ -378,8 +388,6 @@ function emitStructuredFindings({
       ts: new Date().toISOString(),
     });
   });
-
-  sendTrace('schema.validated', 'Zod schema accepted extraction payload.', 0.97);
 }
 
 function finalizeDeepgram(state: GatewaySessionState) {

@@ -416,8 +416,12 @@ function appendTraceEvent(
   const importantSteps = new Set([
     'redaction.applied',
     'tool.called',
+    'tool.result',
     'schema.validated',
     'agent.noop',
+    'agent.started',
+    'agent.fallback',
+    'agent.error',
     'deepgram.error',
     'deepgram.connected',
   ]);

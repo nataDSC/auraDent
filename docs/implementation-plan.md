@@ -46,10 +46,10 @@ Status legend:
 - `Completed` Add a starter extraction function that turns transcript text into typed perio findings.
 - `In Progress` Use shared schemas to validate extraction output.
 - `Completed` Add PII redaction middleware between transcript and agent extraction.
-- `Planned` Replace heuristic extraction with Vercel AI SDK orchestration.
-- `Planned` Add typed practice-management tool definitions and tool execution flow.
+- `In Progress` Replace heuristic extraction with Vercel AI SDK orchestration.
+- `In Progress` Add typed practice-management tool definitions and tool execution flow.
 - `Completed` Add trace emission for redaction outcomes.
-- `Planned` Add trace emission for tool activity and richer validation outcomes.
+- `In Progress` Add trace emission for tool activity and richer validation outcomes.
 
 ### Stage 5: Ingestion and persistence preparation
 

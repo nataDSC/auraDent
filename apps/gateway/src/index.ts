@@ -201,6 +201,7 @@ function startDemoSession({
             sendTrace,
             sessionId: 'demo-session',
             transcript: transcriptWindow,
+            currentUtteranceText: item.final,
             utteranceId: item.utteranceId,
           }).catch((error) => {
             request.log.error({ error }, 'Failed to emit structured demo findings');
@@ -312,7 +313,14 @@ function startLiveSession({
 
     if (parsed.is_final) {
       const transcriptWindow = getTranscriptWindow(state, utteranceId);
-      void emitStructuredFindings({ send, sendTrace, sessionId, transcript: transcriptWindow, utteranceId }).catch((error) => {
+      void emitStructuredFindings({
+        send,
+        sendTrace,
+        sessionId,
+        transcript: transcriptWindow,
+        currentUtteranceText: transcript,
+        utteranceId,
+      }).catch((error) => {
         request.log.error({ error }, 'Failed to emit structured live findings');
         sendTrace('agent.error', `Clinical agent failed for utterance ${utteranceId}.`, 0.3);
       });
@@ -351,18 +359,21 @@ async function emitStructuredFindings({
   sendTrace,
   sessionId,
   transcript,
+  currentUtteranceText,
   utteranceId,
 }: {
   send: (event: RealtimeEvent) => void;
   sendTrace: (step: string, detail: string, confidence?: number) => void;
   sessionId: string;
   transcript: string;
+  currentUtteranceText: string;
   utteranceId: string;
 }) {
+  const currentUtteranceRedaction = redactTranscriptPII(currentUtteranceText);
   const redaction = redactTranscriptPII(transcript);
 
-  if (redaction.matches.length > 0) {
-    const summary = summarizeRedactions(redaction.matches);
+  if (currentUtteranceRedaction.matches.length > 0) {
+    const summary = summarizeRedactions(currentUtteranceRedaction.matches);
     sendTrace(
       'redaction.applied',
       `PII redacted for finalized utterance ${utteranceId} before agent handoff: ${summary}.`,

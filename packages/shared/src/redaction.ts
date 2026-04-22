@@ -25,11 +25,6 @@ type RedactionRule = {
 
 const REDACTION_RULES: RedactionRule[] = [
   {
-    entityType: 'phone',
-    placeholder: '[PHONE]',
-    pattern: /\b(?:phone(?:\s+number)?|number)\b([\s,:-]*)(?:\+?1[\s.-]*)?(?:\(?\d[\d\s().-]{5,20}\d)\b/gi,
-  },
-  {
     entityType: 'ssn',
     placeholder: '[SSN]',
     pattern: /\b\d{3}-\d{2}-\d{4}\b/g,
@@ -80,16 +75,31 @@ export function redactTranscriptPII(text: string): RedactionResult {
         return match.replace(capturedName, rule.placeholder);
       }
 
-      if (rule.entityType === 'phone' && /(?:phone|phone number)/i.test(match)) {
-        return match.replace(/(?:\+?1[\s.-]*)?(?:\(?\d[\d\s().-]{5,20}\d)\b/, rule.placeholder);
-      }
-
       return rule.placeholder;
     });
   }
+
+  redactedText = redactLoosePhoneSequence(redactedText, matches);
 
   return {
     text: redactedText,
     matches,
   };
+}
+
+function redactLoosePhoneSequence(text: string, matches: RedactionMatch[]) {
+  return text.replace(/\b((?:phone(?:\s+number)?|number)\b[\s,:-]*)(\d(?:[\d\s().-]{5,20}\d))\b/gi, (match, prefix: string, numericSequence: string) => {
+    const digitCount = numericSequence.replace(/\D/g, '').length;
+    if (digitCount < 7 || digitCount > 11) {
+      return match;
+    }
+
+    matches.push({
+      entityType: 'phone',
+      original: numericSequence,
+      placeholder: '[PHONE]',
+    });
+
+    return `${prefix}[PHONE]`;
+  });
 }

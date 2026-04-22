@@ -1,0 +1,18 @@
+{
+  "name": "@auradent/ingestion",
+  "private": true,
+  "version": "0.1.0",
+  "type": "module",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "@auradent/shared": "file:../shared"
+  },
+  "devDependencies": {
+    "typescript": "^5.8.3"
+  }
+}

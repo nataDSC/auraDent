@@ -12,7 +12,11 @@ export type RealtimeEvent =
 export type ClientSocketMessage =
   | {
       type: 'session.start';
+      sessionId: string;
       mode: 'demo' | 'live';
+      localPersistence?: {
+        postgresOnStop?: boolean;
+      };
       audio?: {
         encoding: 'linear16';
         sampleRate: number;

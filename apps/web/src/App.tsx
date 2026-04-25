@@ -24,12 +24,14 @@ type SessionSnapshot = {
   detail: string;
 };
 
-const gatewayUrl = import.meta.env.VITE_GATEWAY_URL ?? 'ws://localhost:8787/realtime/session/demo-session';
+const gatewayUrl = import.meta.env.VITE_GATEWAY_URL ?? 'ws://localhost:8787/realtime/session/browser-client';
 
 export default function App() {
   const [socketStatus, setSocketStatus] = useState<SocketStatus>('connecting');
   const [recordingState, setRecordingState] = useState<RecordingState>('idle');
   const [agentMode, setAgentMode] = useState<'unknown' | 'ai-sdk' | 'heuristic'>('unknown');
+  const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
+  const [postgresOnStop, setPostgresOnStop] = useState(false);
   const [transcript, setTranscript] = useState<TranscriptLine[]>([]);
   const [traceEvents, setTraceEvents] = useState<Array<{ detail: string; step: string; confidence?: number }>>([]);
   const [findings, setFindings] = useState<FindingCard[]>([]);
@@ -46,6 +48,7 @@ export default function App() {
   const finalTranscriptCount = transcript.filter((line) => line.final).length;
   const tentativeTranscriptCount = transcript.length - finalTranscriptCount;
   const sessionSnapshot = buildSessionSnapshot({
+    activeSessionId,
     micError,
     recordingState,
     socketStatus,
@@ -54,6 +57,10 @@ export default function App() {
     findingsCount: findings.length,
     metrics,
     traceCount: traceEvents.length,
+  });
+  const findingsEmptyState = buildFindingsEmptyState({
+    recordingState,
+    traceEvents,
   });
 
   useEffect(() => {
@@ -78,6 +85,9 @@ export default function App() {
       const event = JSON.parse(message.data) as RealtimeEvent;
 
       switch (event.type) {
+        case 'session.started':
+          setActiveSessionId(event.sessionId);
+          break;
         case 'audio.level':
           setAudioLevel(event.level);
           break;
@@ -204,6 +214,10 @@ export default function App() {
 
       sendClientMessage({
         type: 'session.start',
+        sessionId: createSessionId('live'),
+        localPersistence: {
+          postgresOnStop,
+        },
         mode: 'live',
         audio: {
           encoding: 'linear16',
@@ -240,7 +254,14 @@ export default function App() {
     resetSessionView();
     setMicError(null);
     setRecordingState('demo');
-    sendClientMessage({ type: 'session.start', mode: 'demo' });
+    sendClientMessage({
+      type: 'session.start',
+      sessionId: createSessionId('demo'),
+      localPersistence: {
+        postgresOnStop,
+      },
+      mode: 'demo',
+    });
   }
 
   function stopStreaming() {
@@ -307,6 +328,14 @@ export default function App() {
             >
               Stop
             </button>
+            <label className={`toggle-chip ${postgresOnStop ? 'toggle-chip-enabled' : ''}`}>
+              <input
+                type="checkbox"
+                checked={postgresOnStop}
+                onChange={(event) => setPostgresOnStop(event.target.checked)}
+              />
+              <span>Write to Postgres on Stop</span>
+            </label>
           </div>
         </div>
       </header>
@@ -323,7 +352,7 @@ export default function App() {
             <div className="metric-strip">
               {Object.entries(metrics).map(([name, value]) => (
                 <div key={name} className="metric-chip">
-                  <span>{name}</span>
+                  <span>{formatMetricName(name)}</span>
                   <strong>{value}</strong>
                 </div>
               ))}
@@ -335,6 +364,20 @@ export default function App() {
               <span className="session-brief-label">Session state</span>
               <strong>{sessionSnapshot.label}</strong>
               <p>{sessionSnapshot.detail}</p>
+            </article>
+            <article className="session-brief tone-muted">
+              <span className="session-brief-label">Session id</span>
+              <strong>{activeSessionId ?? 'pending'}</strong>
+              <p>Each run now receives its own durable identifier for replay, audit, and persistence.</p>
+            </article>
+            <article className={`session-brief ${postgresOnStop ? 'tone-live' : 'tone-muted'}`}>
+              <span className="session-brief-label">Post-stop persistence</span>
+              <strong>{postgresOnStop ? 'Postgres auto-write enabled' : 'Manual worker replay'}</strong>
+              <p>
+                {postgresOnStop
+                  ? 'On Stop, the gateway will try to push the session payload through the local PostgreSQL worker path immediately.'
+                  : 'On Stop, the gateway will only save and publish the session-close payload until you replay it manually.'}
+              </p>
             </article>
             <article className="session-brief tone-muted">
               <span className="session-brief-label">Connection</span>
@@ -391,8 +434,8 @@ export default function App() {
           <div className="chart-grid">
             {findings.length === 0 ? (
               <div className="empty-state-card">
-                <strong>No findings committed yet</strong>
-                <p>Structured cards will stage here as soon as the agent validates a clinical extraction.</p>
+                <strong>{findingsEmptyState.title}</strong>
+                <p>{findingsEmptyState.detail}</p>
               </div>
             ) : (
               findings.map((finding) => (
@@ -552,6 +595,7 @@ function resolveAgentMode(detail: string): 'unknown' | 'ai-sdk' | 'heuristic' {
 }
 
 function buildSessionSnapshot(args: {
+  activeSessionId: string | null;
   micError: string | null;
   recordingState: RecordingState;
   socketStatus: SocketStatus;
@@ -587,7 +631,7 @@ function buildSessionSnapshot(args: {
     return {
       label: 'Live chairside capture',
       tone: 'live',
-      detail: 'Microphone audio is streaming to the gateway and provider in realtime.',
+      detail: `Microphone audio is streaming to the gateway and provider in realtime${args.activeSessionId ? ` for ${args.activeSessionId}` : ''}.`,
     };
   }
 
@@ -595,7 +639,7 @@ function buildSessionSnapshot(args: {
     return {
       label: 'Demo narrative',
       tone: 'muted',
-      detail: 'A scripted transcript is driving the UI so the full workflow can be previewed safely.',
+      detail: `A scripted transcript is driving the UI${args.activeSessionId ? ` for ${args.activeSessionId}` : ''} so the full workflow can be previewed safely.`,
     };
   }
 
@@ -622,9 +666,65 @@ function buildObservabilitySnapshot(args: {
     };
   }
 
+  const ttft = args.metrics.ttft;
+  const finalizationLatency = args.metrics.finalization_latency;
+  if (ttft || finalizationLatency) {
+    return {
+      label: `${args.traceCount} trace • ${metricCount} metrics • ${args.findingsCount} findings`,
+      tone: 'live',
+      detail: `TTFT ${ttft ?? 'pending'}${finalizationLatency ? ` • Finalization ${finalizationLatency}` : ''}`,
+    };
+  }
+
   return {
     label: `${args.traceCount} trace • ${metricCount} metrics • ${args.findingsCount} findings`,
     tone: 'live',
     detail: 'Realtime instrumentation is active, so session behavior can be inspected without leaving the terminal view.',
   };
+}
+
+function buildFindingsEmptyState(args: {
+  recordingState: RecordingState;
+  traceEvents: Array<{ detail: string; step: string; confidence?: number }>;
+}) {
+  const latestDeferred = [...args.traceEvents].reverse().find((event) => event.step === 'agent.deferred');
+
+  if (latestDeferred) {
+    return {
+      title: 'Awaiting explicit tooth reference',
+      detail: 'Structured extraction is paused until the transcript includes a trusted tooth reference like "tooth 14."',
+    };
+  }
+
+  if (args.recordingState === 'recording' || args.recordingState === 'demo') {
+    return {
+      title: 'Listening for a complete clinical finding',
+      detail: 'Structured cards will stage here once the agent receives both clinical detail and a clear tooth reference.',
+    };
+  }
+
+  return {
+    title: 'No findings committed yet',
+    detail: 'Structured cards will stage here as soon as the agent validates a clinical extraction.',
+  };
+}
+
+function createSessionId(mode: 'demo' | 'live') {
+  const suffix =
+    typeof crypto !== 'undefined' && typeof crypto.randomUUID === 'function'
+      ? crypto.randomUUID().slice(0, 8)
+      : Math.random().toString(36).slice(2, 10);
+  return `${mode}-${new Date().toISOString().replace(/[-:.TZ]/g, '').slice(0, 14)}-${suffix}`;
+}
+
+function formatMetricName(name: string) {
+  if (name === 'ttft') {
+    return 'TTFT';
+  }
+
+  if (name === 'finalization_latency') {
+    return 'Finalization latency';
+  }
+
+  return name.replace(/_/g, ' ');
 }

@@ -3,6 +3,7 @@ import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
 import { SendMessageCommand, SQSClient } from '@aws-sdk/client-sqs';
 import { runClinicalAgent } from '@auradent/agent-core';
+import { processSessionClosePayload, withSessionPersistence } from '@auradent/worker/process-session-close';
 import {
   redactTranscriptPII,
   type ClientSocketMessage,
@@ -20,12 +21,16 @@ import { reconcileTranscriptRevision, type TranscriptRevisionStore } from './tra
 type SocketMessage = string | Buffer | ArrayBuffer | Buffer[];
 
 type GatewaySessionState = {
+  activeSessionId?: string;
   audioInterval?: NodeJS.Timeout;
+  autoPersistToPostgres: boolean;
   deepgramSocket?: WebSocket;
   deepgramKeepAlive?: NodeJS.Timeout;
+  deepgramOpenedAt?: number;
   completedExtractionSequence: number;
   extractionChain: Promise<void>;
   extractionSequence: number;
+  hasEmittedTtft: boolean;
   isStopping: boolean;
   lastAudioAt?: number;
   pendingExtractions: Set<Promise<void>>;
@@ -97,9 +102,12 @@ app.register(async (instance) => {
   instance.get('/realtime/session/:sessionId', { websocket: true }, (socket, request) => {
     const sessionId = String((request.params as { sessionId: string }).sessionId);
     const state: GatewaySessionState = {
+      activeSessionId: sessionId,
       completedExtractionSequence: 0,
       transcriptCounter: 0,
       demoTimers: [],
+      autoPersistToPostgres: false,
+      hasEmittedTtft: false,
       extractionChain: Promise.resolve(),
       extractionSequence: 0,
       isStopping: false,
@@ -193,6 +201,14 @@ app.register(async (instance) => {
         if (payload.type === 'session.start') {
           teardownSession(state);
           resetSessionArtifacts(state);
+          state.activeSessionId = payload.sessionId;
+          state.autoPersistToPostgres = Boolean(payload.localPersistence?.postgresOnStop);
+
+          send({
+            type: 'session.started',
+            sessionId: payload.sessionId,
+            ts: new Date().toISOString(),
+          });
 
           if (payload.mode === 'live') {
             if (!process.env.DEEPGRAM_API_KEY) {
@@ -218,13 +234,13 @@ app.register(async (instance) => {
               request,
               send,
               sendTrace,
-              sessionId,
+              sessionId: payload.sessionId,
               state,
             });
             return;
           }
 
-          startDemoSession({ request, send, sendTrace, state, sessionId });
+          startDemoSession({ request, send, sendTrace, state, sessionId: payload.sessionId });
           return;
         }
 
@@ -238,11 +254,11 @@ app.register(async (instance) => {
             request,
             sendTrace,
             state,
-            sessionId,
+            sessionId: state.activeSessionId ?? sessionId,
           });
           send({
             type: 'session.closed',
-            sessionId,
+            sessionId: state.activeSessionId ?? sessionId,
             ts: new Date().toISOString(),
           });
         }
@@ -266,13 +282,14 @@ function startDemoSession({
   request,
   send,
   sendTrace,
+  sessionId,
   state,
 }: {
   request: FastifyRequest;
   send: (event: RealtimeEvent) => void;
   sendTrace: (step: string, detail: string, confidence?: number) => void;
-  state: GatewaySessionState;
   sessionId: string;
+  state: GatewaySessionState;
 }) {
   sendTrace('session.mode', 'Starting demo mode transcript stream.', 0.95);
 
@@ -341,7 +358,7 @@ function startDemoSession({
           queueExtraction(state, () => emitStructuredFindings({
             send,
             sendTrace,
-            sessionId: 'demo-session',
+            sessionId,
             transcript: transcriptWindow,
             currentUtteranceText: item.final,
             utteranceId: item.utteranceId,
@@ -352,7 +369,7 @@ function startDemoSession({
 
           send({
             type: 'metric',
-            name: 'transcription',
+            name: 'finalization_latency',
             value: 244,
             unit: 'ms',
             ts: new Date().toISOString(),
@@ -395,17 +412,11 @@ function startLiveSession({
   });
 
   state.deepgramSocket = deepgramSocket;
+  state.deepgramOpenedAt = openedAt;
   state.lastAudioAt = Date.now();
 
   deepgramSocket.on('open', () => {
     sendTrace('deepgram.connected', 'Deepgram live transcription websocket opened.', 0.99);
-    send({
-      type: 'metric',
-      name: 'ttft',
-      value: Date.now() - openedAt,
-      unit: 'ms',
-      ts: new Date().toISOString(),
-    });
 
     state.deepgramKeepAlive = setInterval(() => {
       if (!state.deepgramSocket || state.deepgramSocket.readyState !== WebSocket.OPEN) {
@@ -446,6 +457,17 @@ function startLiveSession({
       return;
     }
 
+    if (!state.hasEmittedTtft && typeof state.deepgramOpenedAt === 'number') {
+      state.hasEmittedTtft = true;
+      send({
+        type: 'metric',
+        name: 'ttft',
+        value: Math.max(0, Date.now() - state.deepgramOpenedAt),
+        unit: 'ms',
+        ts,
+      });
+    }
+
     const finalRedaction = parsed.is_final ? redactTranscriptPII(revision.text) : null;
 
     send(
@@ -463,6 +485,24 @@ function startLiveSession({
     if (parsed.is_final) {
       recordFinalUtterance(state, utteranceId, revision.text);
       sendTrace('transcript.finalized', `Deepgram finalized utterance ${utteranceId}.`, confidence);
+
+      if (
+        typeof state.deepgramOpenedAt === 'number' &&
+        typeof parsed.start === 'number' &&
+        typeof parsed.duration === 'number'
+      ) {
+        const finalizationLatency = Math.max(
+          0,
+          Date.now() - state.deepgramOpenedAt - Math.round((parsed.start + parsed.duration) * 1000),
+        );
+        send({
+          type: 'metric',
+          name: 'finalization_latency',
+          value: finalizationLatency,
+          unit: 'ms',
+          ts,
+        });
+      }
     }
 
     if (revision.shouldQueueExtraction) {
@@ -617,8 +657,10 @@ function stopDemoSession(state: GatewaySessionState) {
 
 function resetSessionArtifacts(state: GatewaySessionState) {
   state.completedExtractionSequence = 0;
+  state.deepgramOpenedAt = undefined;
   state.extractionChain = Promise.resolve();
   state.extractionSequence = 0;
+  state.hasEmittedTtft = false;
   state.isStopping = false;
   state.pendingExtractions = new Set();
   state.transcriptRevisions = new Map();
@@ -742,9 +784,63 @@ async function publishSessionClose({
   try {
     await publisher.publish(payload);
     sendTrace('session.wrapup.enqueued', 'Session close payload published for async processing.', 0.97);
+    if (state.autoPersistToPostgres) {
+      await persistSessionCloseToLocalPostgres({
+        payload,
+        request,
+        sendTrace,
+      });
+    }
   } catch (error) {
     request.log.error({ error }, 'Failed to publish session close payload');
     sendTrace('session.wrapup.error', 'Failed to publish session close payload for async processing.', 0.3);
+  }
+}
+
+async function persistSessionCloseToLocalPostgres(args: {
+  payload: SessionClosePayload;
+  request: FastifyRequest;
+  sendTrace: (step: string, detail: string, confidence?: number) => void;
+}) {
+  if (!process.env.AURADENT_DATABASE_URL) {
+    args.sendTrace(
+      'session.wrapup.persist.error',
+      'Write to Postgres on Stop is enabled, but AURADENT_DATABASE_URL is not configured on the gateway.',
+      0.32,
+    );
+    return;
+  }
+
+  try {
+    const summary = await withSessionPersistence((persistence) =>
+      processSessionClosePayload(args.payload, persistence, {
+        runtime: 'local',
+      }),
+    );
+
+    if (summary.persistence !== 'postgres') {
+      args.sendTrace(
+        'session.wrapup.persist.error',
+        `Write to Postgres on Stop requested PostgreSQL, but persistence resolved to ${summary.persistence}.`,
+        0.32,
+      );
+      return;
+    }
+
+    args.sendTrace(
+      'session.wrapup.persisted',
+      `Local Postgres persistence completed for ${summary.sessionId} with ${summary.findings} finding${summary.findings === 1 ? '' : 's'}.`,
+      0.98,
+    );
+  } catch (error) {
+    args.request.log.error({ error }, 'Failed local Postgres persistence after session stop');
+    args.sendTrace(
+      'session.wrapup.persist.error',
+      error instanceof Error
+        ? `Local Postgres persistence failed: ${error.message}`
+        : 'Local Postgres persistence failed after session stop.',
+      0.24,
+    );
   }
 }
 

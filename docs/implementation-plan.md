@@ -27,7 +27,7 @@ Status legend:
 - `Completed` Add Framer Motion layout and entry animations for transcript and chart cards.
 - `Completed` Connect the UI to the gateway WebSocket.
 - `Completed` Add real microphone capture and browser audio streaming.
-- `In Progress` Add production-quality latency and session state UX.
+- `In Progress` Add production-quality latency and session state UX, including unique per-run session identifiers and explicit empty/deferred extraction guidance.
 
 ### Stage 3: Real-time gateway
 

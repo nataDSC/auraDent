@@ -83,6 +83,9 @@ This scaffold now includes a runnable local demo path:
 - `In Progress` Early unit and integration-style coverage for gateway, ingestion, and worker persistence paths.
 - `In Progress` Worker-side audit metadata for processing duration, receive counts, and payload/record integrity hashes.
 - `In Progress` Frontend session-state polish and operator-friendly persisted-record readback summaries.
+- `Completed` Unique per-run session ids in the UI/gateway flow, so replay and persistence no longer collapse everything into `demo-session`.
+- `Completed` Clearer latency surfacing in the UI, including explicit `TTFT` and `Finalization latency` metrics.
+- `Completed` Findings empty-state guidance that explains when extraction is waiting for an explicit tooth reference.
 
 ### Run Current Stage
 
@@ -166,6 +169,15 @@ npm run run:worker-local -- "/Users/nataliep/Documents/New project/tmp/session-c
 ```
 
 With no `AURADENT_DATABASE_URL`, the worker writes to `AURADENT_PERSISTENCE_FILE` or `/tmp/auradent-session-records.jsonl`. With `AURADENT_DATABASE_URL` set, it writes to PostgreSQL instead.
+
+The UI now also includes a `Write to Postgres on Stop` toggle for local development. When enabled, the gateway will try to run the local worker persistence path automatically after `Stop`. For that to succeed, the gateway process itself must be started with:
+
+```bash
+export AURADENT_DATABASE_URL="postgresql://supabase_admin:postgres@127.0.0.1:54322/postgres"
+export AURADENT_DATABASE_SSL=disable
+```
+
+If those env vars are missing on the gateway process, the trace will show `session.wrapup.persist.error` and the session-close payload will still be saved normally for manual replay.
 
 For local PostgreSQL setup and inspection:
 

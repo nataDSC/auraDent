@@ -355,6 +355,31 @@ body {
   flex-wrap: wrap;
 }
 
+.toggle-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  padding: 11px 14px;
+  border-radius: 14px;
+  border: 1px solid rgba(166, 226, 255, 0.16);
+  background: rgba(8, 24, 32, 0.88);
+  color: #dff3fc;
+}
+
+.toggle-chip input {
+  margin: 0;
+  accent-color: #57e8aa;
+}
+
+.toggle-chip span {
+  font-size: 0.86rem;
+}
+
+.toggle-chip-enabled {
+  border-color: rgba(87, 232, 170, 0.26);
+  background: rgba(10, 36, 33, 0.92);
+}
+
 .action-button {
   border: 1px solid rgba(166, 226, 255, 0.16);
   background: rgba(8, 24, 32, 0.88);

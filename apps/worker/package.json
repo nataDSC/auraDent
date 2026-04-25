@@ -3,6 +3,9 @@
   "private": true,
   "version": "0.1.0",
   "type": "module",
+  "exports": {
+    "./process-session-close": "./src/process-session-close.ts"
+  },
   "scripts": {
     "build": "tsc -p tsconfig.json",
     "migrate:local": "tsx src/migrate.ts",

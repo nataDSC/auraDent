@@ -12,6 +12,7 @@
   "dependencies": {
     "@auradent/agent-core": "file:../../packages/agent-core",
     "@auradent/shared": "file:../../packages/shared",
+    "@auradent/worker": "file:../../apps/worker",
     "@aws-sdk/client-sqs": "^3.917.0",
     "@fastify/cors": "^11.1.0",
     "@fastify/websocket": "^11.2.0",

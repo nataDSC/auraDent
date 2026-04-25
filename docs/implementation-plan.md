@@ -73,7 +73,7 @@ Status legend:
 - `Completed` Add mock insurance pre-authorization flow stub in the worker.
 - `Completed` Add persistence-ready enriched session record assembly in the worker.
 - `Completed` Add worker persistence adapter with PostgreSQL and local-file fallback modes.
-- `In Progress` Harden production PostgreSQL rollout, migrations, artifact persistence, and queue retry semantics.
+- `In Progress` Harden production PostgreSQL rollout, artifact persistence, queue retry semantics, and persisted audit metadata.
 
 ### Stage 7: Verification and hardening
 
@@ -81,7 +81,7 @@ Status legend:
 - `In Progress` Add unit tests for schemas, normalization, transcript revision logic, and worker persistence.
 - `In Progress` Add integration-style tests for gateway extraction gating, session-close replay, and async backend boundaries.
 - `In Progress` Add reconnect handling, retry behavior, and DLQ operational coverage.
-- `Planned` Add observability, audit, and metrics validation.
+- `In Progress` Add observability, audit, and metrics validation.
 
 ## Guiding principles
 

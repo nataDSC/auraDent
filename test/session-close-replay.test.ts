@@ -69,7 +69,9 @@ test('gateway payload replay flows through worker persistence end to end', async
   const persistence = await createSessionPersistenceAdapter();
 
   try {
-    const summary = await processSessionClosePayload(savedPayload, persistence);
+    const summary = await processSessionClosePayload(savedPayload, persistence, {
+      runtime: 'local',
+    });
 
     assert.equal(summary.sessionId, 'replay-session');
     assert.equal(summary.findings, 1);
@@ -81,6 +83,12 @@ test('gateway payload replay flows through worker persistence end to end', async
 
   const persisted = JSON.parse(await readFile(persistenceFile, 'utf8')) as {
     normalizedFindings: Array<{ toothNumber: number; bleedingOnProbing: boolean }>;
+    observability: {
+      processing: {
+        payloadSha256: string;
+        runtime: string;
+      };
+    };
     postOpInstruction: { fileName: string };
     transcript: { finalText: string };
   };
@@ -89,4 +97,6 @@ test('gateway payload replay flows through worker persistence end to end', async
   assert.equal(persisted.normalizedFindings[0]?.bleedingOnProbing, true);
   assert.equal(persisted.postOpInstruction.fileName, 'post-op-replay-session.pdf');
   assert.match(persisted.transcript.finalText, /\[PATIENT_NAME\]/);
+  assert.equal(persisted.observability.processing.runtime, 'local');
+  assert.match(persisted.observability.processing.payloadSha256, /^[a-f0-9]{64}$/);
 });

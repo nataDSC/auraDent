@@ -82,8 +82,11 @@ test('buildPersistableSessionRecord assembles artifact and insurance metadata', 
   assert.equal(postOpInstruction.mimeType, 'application/pdf');
   assert.ok(postOpInstruction.byteLength > 0);
   assert.match(postOpInstruction.previewText, /Tooth 14 4mm/);
+  assert.match(postOpInstruction.sha256Digest, /^[a-f0-9]{64}$/);
   assert.equal(insurance.status, 'approved');
   assert.equal(record.insurancePreAuthorization.status, 'approved');
   assert.equal(record.postOpInstruction.fileName, 'post-op-session-123.pdf');
+  assert.match(record.postOpInstruction.sha256Digest, /^[a-f0-9]{64}$/);
   assert.equal(record.normalizedFindings[0]?.toothNumber, 14);
+  assert.equal(record.observability.sourceArtifacts.trace.length, 1);
 });

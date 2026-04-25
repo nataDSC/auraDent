@@ -1,3 +1,4 @@
+import { createHash } from 'node:crypto';
 import type { AgentExtraction, SessionClosePayload } from '@auradent/shared';
 
 export type NormalizedPerioRecord = {
@@ -28,6 +29,7 @@ export type PostOpInstructionArtifact = {
   byteLength: number;
   contentBase64: string;
   previewText: string;
+  sha256Digest: string;
 };
 
 export type MockInsurancePreAuthResult = {
@@ -53,9 +55,24 @@ export type PersistableSessionRecord = {
     mimeType: 'application/pdf';
     byteLength: number;
     previewText: string;
+    sha256Digest: string;
   };
   insurancePreAuthorization: MockInsurancePreAuthResult;
-  observability: SessionClosePayload['artifacts'];
+  observability: {
+    sourceArtifacts: SessionClosePayload['artifacts'];
+    processing?: {
+      processedAt: string;
+      processingDurationMs: number;
+      runtime: 'local' | 'lambda';
+      persistenceMode: 'postgres' | 'local-file';
+      sourceMessageId?: string;
+      approximateReceiveCount?: number;
+      traceEventCount: number;
+      metricCount: number;
+      payloadSha256: string;
+      recordSha256: string;
+    };
+  };
 };
 
 export function generatePostOpInstructionArtifact(
@@ -82,6 +99,7 @@ export function generatePostOpInstructionArtifact(
     byteLength: pdfBuffer.byteLength,
     contentBase64: pdfBuffer.toString('base64'),
     previewText,
+    sha256Digest: createSha256Digest(pdfBuffer),
   };
 }
 
@@ -124,9 +142,12 @@ export function buildPersistableSessionRecord(args: {
       mimeType: postOpInstruction.mimeType,
       byteLength: postOpInstruction.byteLength,
       previewText: postOpInstruction.previewText,
+      sha256Digest: postOpInstruction.sha256Digest,
     },
     insurancePreAuthorization,
-    observability: payload.artifacts,
+    observability: {
+      sourceArtifacts: payload.artifacts,
+    },
   };
 }
 
@@ -170,4 +191,8 @@ startxref
 %%EOF`;
 
   return Buffer.from(pdf, 'utf8');
+}
+
+function createSha256Digest(value: string | Buffer) {
+  return createHash('sha256').update(value).digest('hex');
 }

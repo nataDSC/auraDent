@@ -38,17 +38,29 @@ test('processSessionClosePayload persists to local JSONL fallback and returns su
   const persistence = await createSessionPersistenceAdapter();
 
   try {
-    const summary = await processSessionClosePayload(payload, persistence);
+    const summary = await processSessionClosePayload(payload, persistence, {
+      runtime: 'local',
+    });
 
     assert.equal(summary.persistence, 'local-file');
     assert.equal(summary.findings, 1);
     assert.equal(summary.sessionId, 'test-session');
+    assert.ok(summary.processingDurationMs >= 0);
+    assert.match(summary.recordSha256, /^[a-f0-9]{64}$/);
   } finally {
     await persistence.close();
   }
 
   const contents = await readFile(persistenceFile, 'utf8');
   const persisted = JSON.parse(contents.trim()) as {
+    observability: {
+      processing: {
+        payloadSha256: string;
+        persistenceMode: string;
+        recordSha256: string;
+        runtime: string;
+      };
+    };
     sessionId: string;
     postOpInstruction: { fileName: string };
     insurancePreAuthorization: { status: string };
@@ -57,4 +69,8 @@ test('processSessionClosePayload persists to local JSONL fallback and returns su
   assert.equal(persisted.sessionId, 'test-session');
   assert.equal(persisted.postOpInstruction.fileName, 'post-op-test-session.pdf');
   assert.equal(persisted.insurancePreAuthorization.status, 'approved');
+  assert.equal(persisted.observability.processing.runtime, 'local');
+  assert.equal(persisted.observability.processing.persistenceMode, 'local-file');
+  assert.match(persisted.observability.processing.payloadSha256, /^[a-f0-9]{64}$/);
+  assert.match(persisted.observability.processing.recordSha256, /^[a-f0-9]{64}$/);
 });

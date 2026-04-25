@@ -9,7 +9,9 @@ loadWorkerLocalEnv();
 async function main() {
   const payload = await readPayload();
   const summary = await withSessionPersistence((persistence) =>
-    processSessionClosePayload(payload, persistence),
+    processSessionClosePayload(payload, persistence, {
+      runtime: 'local',
+    }),
   );
 
   console.log(

@@ -8,7 +8,11 @@ export const handler: SQSHandler = async (event: SQSEvent): Promise<SQSBatchResp
       event,
       processRecord: async (record) => {
         const payload = JSON.parse(record.body) as SessionClosePayload;
-        const summary = await processSessionClosePayload(payload, persistence);
+        const summary = await processSessionClosePayload(payload, persistence, {
+          approximateReceiveCount: Number(record.attributes.ApproximateReceiveCount ?? 0) || undefined,
+          runtime: 'lambda',
+          sourceMessageId: record.messageId,
+        });
 
         console.log(
           JSON.stringify({
@@ -20,6 +24,8 @@ export const handler: SQSHandler = async (event: SQSEvent): Promise<SQSBatchResp
             persistence: summary.persistence,
             postOpFile: summary.postOpFile,
             insuranceStatus: summary.insuranceStatus,
+            processingDurationMs: summary.processingDurationMs,
+            recordSha256: summary.recordSha256,
             persisted: true,
             approximateReceiveCount:
               record.attributes.ApproximateReceiveCount ?? record.attributes?.ApproximateReceiveCount,

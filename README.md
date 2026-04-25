@@ -80,6 +80,7 @@ This scaffold now includes a runnable local demo path:
 - `In Progress` AWS deployment wiring from queue to bundled worker artifact, pending dependency install and `cdk` deployment.
 - `In Progress` Production PostgreSQL rollout, downstream artifact persistence hardening, and async retry/DLQ behavior.
 - `In Progress` Early unit and integration-style coverage for gateway, ingestion, and worker persistence paths.
+- `In Progress` Worker-side audit metadata for processing duration, receive counts, and payload/record integrity hashes.
 
 ### Run Current Stage
 

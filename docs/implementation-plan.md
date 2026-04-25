@@ -57,8 +57,8 @@ Status legend:
 - `Completed` Create the `ingestion` package boundary.
 - `Completed` Add normalization logic from structured findings into persistence-ready records.
 - `Planned` Add deduplication across transcript revisions and partial/final updates.
-- `Planned` Add canonical PostgreSQL DTOs and write adapters.
-- `Planned` Add provenance and replay support for normalized records.
+- `Completed` Add canonical persistence-ready session record DTOs and worker write adapters for PostgreSQL and local replay.
+- `In Progress` Add provenance and replay support for normalized records.
 
 ### Stage 6: Async backend
 
@@ -78,7 +78,7 @@ Status legend:
 ### Stage 7: Verification and hardening
 
 - `In Progress` Install dependencies and run full workspace verification.
-- `Planned` Add unit tests for schemas, normalization, and transcript revision logic.
+- `In Progress` Add unit tests for schemas, normalization, transcript revision logic, and worker persistence.
 - `Planned` Add integration tests for gateway, agent, and async backend boundaries.
 - `Planned` Add reconnect handling, retry behavior, and DLQ operational coverage.
 - `Planned` Add observability, audit, and metrics validation.
@@ -226,7 +226,7 @@ Status: `In Progress`
 
 ### Milestone 5: Hardening
 
-Status: `Planned`
+Status: `In Progress`
 
 - add reconnect behavior,
 - add DLQ and retry handling,

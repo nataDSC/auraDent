@@ -73,11 +73,13 @@ This scaffold now includes a runnable local demo path:
 - `Completed` Gateway SQS publisher wiring for real session-close enqueue when AWS credentials and queue env vars are present.
 - `Completed` Worker enrichment stubs for post-op PDF generation, mock insurance pre-authorization, and persistence-ready session record assembly.
 - `Completed` Worker persistence adapter with PostgreSQL write path and local JSONL fallback for development.
+- `Completed` Local replay loop for session-close payloads, including saved gateway payload snapshots and worker readback/migration utilities.
 - `In Progress` Dependency installation and full workspace verification.
 - `In Progress` Deepgram live transcription wiring and end-to-end session lifecycle shape.
 - `In Progress` Vercel AI SDK orchestration with mock practice-management tools and heuristic fallback.
 - `In Progress` AWS deployment wiring from queue to bundled worker artifact, pending dependency install and `cdk` deployment.
 - `In Progress` Production PostgreSQL rollout and downstream artifact persistence hardening.
+- `In Progress` Early unit-test coverage for ingestion and worker persistence paths.
 
 ### Run Current Stage
 
@@ -130,7 +132,11 @@ npm run typecheck
 npm run build
 ```
 
-Automated tests are not implemented yet, so there is no `npm test` command at this stage.
+```bash
+npm run test
+```
+
+The current test suite is still small and focused, covering ingestion normalization and local worker persistence behavior.
 
 For local async-worker testing without AWS, you can run the worker directly against a saved session-close payload:
 

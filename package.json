@@ -15,6 +15,7 @@
     "readback:worker-local": "npm run readback:local --workspace @auradent/worker",
     "run:worker-local": "npm run run:local --workspace @auradent/worker",
     "migrate:worker-local": "npm run migrate:local --workspace @auradent/worker",
+    "test": "npm run test --workspaces --if-present",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {

@@ -79,7 +79,7 @@ This scaffold now includes a runnable local demo path:
 - `In Progress` Vercel AI SDK orchestration with mock practice-management tools and heuristic fallback.
 - `In Progress` AWS deployment wiring from queue to bundled worker artifact, pending dependency install and `cdk` deployment.
 - `In Progress` Production PostgreSQL rollout and downstream artifact persistence hardening.
-- `In Progress` Early unit-test coverage for ingestion and worker persistence paths.
+- `In Progress` Early unit and integration-style coverage for gateway, ingestion, and worker persistence paths.
 
 ### Run Current Stage
 

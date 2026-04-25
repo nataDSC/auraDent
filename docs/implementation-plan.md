@@ -79,7 +79,7 @@ Status legend:
 
 - `In Progress` Install dependencies and run full workspace verification.
 - `In Progress` Add unit tests for schemas, normalization, transcript revision logic, and worker persistence.
-- `Planned` Add integration tests for gateway, agent, and async backend boundaries.
+- `In Progress` Add integration-style tests for gateway extraction gating, session-close replay, and async backend boundaries.
 - `Planned` Add reconnect handling, retry behavior, and DLQ operational coverage.
 - `Planned` Add observability, audit, and metrics validation.
 

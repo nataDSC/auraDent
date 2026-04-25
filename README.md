@@ -136,7 +136,12 @@ npm run build
 npm run test
 ```
 
-The current test suite is still small and focused, covering ingestion normalization and local worker persistence behavior.
+The current test suite is still small and focused, covering:
+
+- gateway extraction gating and session-close payload helpers
+- ingestion normalization and persistable record assembly
+- worker local persistence behavior
+- cross-boundary replay from saved gateway payload to worker persistence
 
 For local async-worker testing without AWS, you can run the worker directly against a saved session-close payload:
 

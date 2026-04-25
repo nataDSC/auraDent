@@ -76,6 +76,7 @@ This scaffold now includes a runnable local demo path:
 - `Completed` Local replay loop for session-close payloads, including saved gateway payload snapshots and worker readback/migration utilities.
 - `In Progress` Dependency installation and full workspace verification.
 - `In Progress` Deepgram live transcription wiring and end-to-end session lifecycle shape.
+- `In Progress` Transcript revision reconciliation for partial/final provider updates in the realtime gateway.
 - `In Progress` Vercel AI SDK orchestration with mock practice-management tools and heuristic fallback.
 - `In Progress` AWS deployment wiring from queue to bundled worker artifact, pending dependency install and `cdk` deployment.
 - `In Progress` Production PostgreSQL rollout, downstream artifact persistence hardening, and async retry/DLQ behavior.

@@ -37,7 +37,7 @@ Status legend:
 - `In Progress` Shape the gateway around the intended session lifecycle and event model.
 - `Completed` Add browser audio chunk ingestion.
 - `In Progress` Add Deepgram streaming integration.
-- `Planned` Add transcript revision reconciliation for provider partials and finals.
+- `In Progress` Add transcript revision reconciliation for provider partials and finals.
 - `Completed` Add session-close payload assembly with redacted transcript, structured findings, trace, and metrics capture.
 - `Completed` Add real SQS queue publishing from the gateway when AWS env and credentials are present.
 

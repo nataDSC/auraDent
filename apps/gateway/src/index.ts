@@ -15,6 +15,7 @@ import { fileURLToPath } from 'node:url';
 import WebSocket from 'ws';
 import { hasClinicalSignal, isReadyForStructuredExtraction } from './extraction-gating';
 import { buildSessionClosePayload, writeSessionClosePayloadToDisk } from './session-close';
+import { reconcileTranscriptRevision, type TranscriptRevisionStore } from './transcript-revisions';
 
 type SocketMessage = string | Buffer | ArrayBuffer | Buffer[];
 
@@ -28,6 +29,7 @@ type GatewaySessionState = {
   isStopping: boolean;
   lastAudioAt?: number;
   pendingExtractions: Set<Promise<void>>;
+  transcriptRevisions: TranscriptRevisionStore;
   transcriptCounter: number;
   demoTimers: NodeJS.Timeout[];
   finalizedUtterances: Array<{
@@ -106,6 +108,7 @@ app.register(async (instance) => {
       metrics: [],
       findings: [],
       pendingExtractions: new Set(),
+      transcriptRevisions: new Map(),
     };
 
     const send = (event: RealtimeEvent) => {
@@ -431,33 +434,45 @@ function startLiveSession({
     const utteranceId = getUtteranceId(parsed, state);
     const confidence = alternative?.confidence;
     const ts = new Date().toISOString();
-    const finalRedaction = parsed.is_final ? redactTranscriptPII(transcript) : null;
+    const revision = reconcileTranscriptRevision({
+      utteranceId,
+      text: transcript,
+      isFinal: Boolean(parsed.is_final),
+      store: state.transcriptRevisions,
+    });
+    state.transcriptRevisions = revision.nextStore;
+
+    if (!revision.shouldEmit) {
+      return;
+    }
+
+    const finalRedaction = parsed.is_final ? redactTranscriptPII(revision.text) : null;
 
     send(
       parsed.is_final
         ? {
             type: 'transcript.final',
             utteranceId,
-            text: transcript,
+            text: revision.text,
             redactedText: finalRedaction && finalRedaction.matches.length > 0 ? finalRedaction.text : undefined,
             ts,
           }
-        : { type: 'transcript.partial', utteranceId, text: transcript, ts },
+        : { type: 'transcript.partial', utteranceId, text: revision.text, ts },
     );
 
     if (parsed.is_final) {
-      recordFinalUtterance(state, utteranceId, transcript);
+      recordFinalUtterance(state, utteranceId, revision.text);
       sendTrace('transcript.finalized', `Deepgram finalized utterance ${utteranceId}.`, confidence);
     }
 
-    if (parsed.is_final) {
+    if (revision.shouldQueueExtraction) {
       const transcriptWindow = getTranscriptWindow(state, utteranceId);
       queueExtraction(state, () => emitStructuredFindings({
         send,
         sendTrace,
         sessionId,
         transcript: transcriptWindow,
-        currentUtteranceText: transcript,
+        currentUtteranceText: revision.text,
         utteranceId,
       }).catch((error) => {
         request.log.error({ error }, 'Failed to emit structured live findings');
@@ -606,6 +621,7 @@ function resetSessionArtifacts(state: GatewaySessionState) {
   state.extractionSequence = 0;
   state.isStopping = false;
   state.pendingExtractions = new Set();
+  state.transcriptRevisions = new Map();
   state.transcriptCounter = 0;
   state.finalizedUtterances = [];
   state.traceEvents = [];

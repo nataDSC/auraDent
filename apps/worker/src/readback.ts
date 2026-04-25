@@ -1,5 +1,6 @@
 import process from 'node:process';
 import { loadWorkerLocalEnv } from './load-local-env';
+import { buildReadbackResponse, type PersistedSessionRow } from './readback-format';
 
 loadWorkerLocalEnv();
 
@@ -9,7 +10,9 @@ async function main() {
     throw new Error('AURADENT_DATABASE_URL is required for readback:local.');
   }
 
-  const sessionId = process.argv[2];
+  const args = process.argv.slice(2);
+  const showFullRecords = args.includes('--full');
+  const sessionId = args.find((arg) => !arg.startsWith('--'));
   const limit = Number(process.env.AURADENT_READBACK_LIMIT ?? '5');
   const { Client } = await import('pg');
   const client = new Client({
@@ -28,7 +31,7 @@ async function main() {
               patient_id,
               insurance_status,
               closed_at,
-              jsonb_pretty(record) as record
+              record
             from auradent_session_records
             where session_id = $1
           `,
@@ -41,7 +44,7 @@ async function main() {
               patient_id,
               insurance_status,
               closed_at,
-              jsonb_pretty(record) as record
+              record
             from auradent_session_records
             order by updated_at desc
             limit $1
@@ -49,13 +52,12 @@ async function main() {
           [limit],
         );
 
-    console.log(
-      JSON.stringify({
-        level: 'info',
-        message: 'Read AuraDent persisted session records',
-        rows: result.rows,
-      }),
+    const response = buildReadbackResponse(
+      result.rows as PersistedSessionRow[],
+      showFullRecords || Boolean(sessionId),
     );
+
+    console.log(JSON.stringify(response));
   } finally {
     await client.end();
   }

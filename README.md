@@ -82,6 +82,7 @@ This scaffold now includes a runnable local demo path:
 - `In Progress` Production PostgreSQL rollout, downstream artifact persistence hardening, and async retry/DLQ behavior.
 - `In Progress` Early unit and integration-style coverage for gateway, ingestion, and worker persistence paths.
 - `In Progress` Worker-side audit metadata for processing duration, receive counts, and payload/record integrity hashes.
+- `In Progress` Frontend session-state polish and operator-friendly persisted-record readback summaries.
 
 ### Run Current Stage
 
@@ -180,6 +181,12 @@ You can also read back a single session:
 
 ```bash
 npm run readback:worker-local -- demo-session
+```
+
+For a full raw persisted record payload, add `--full`:
+
+```bash
+npm run readback:worker-local -- demo-session --full
 ```
 
 The detailed stage-by-stage checklist lives in [docs/implementation-plan.md](/Users/nataliep/Documents/New%20project/docs/implementation-plan.md).

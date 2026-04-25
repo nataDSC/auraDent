@@ -18,6 +18,12 @@ type RecordingState = 'idle' | 'requesting' | 'recording' | 'demo';
 
 type SocketStatus = 'connecting' | 'connected' | 'disconnected';
 
+type SessionSnapshot = {
+  label: string;
+  tone: 'live' | 'muted' | 'warn';
+  detail: string;
+};
+
 const gatewayUrl = import.meta.env.VITE_GATEWAY_URL ?? 'ws://localhost:8787/realtime/session/demo-session';
 
 export default function App() {
@@ -37,6 +43,18 @@ export default function App() {
   const processorRef = useRef<ScriptProcessorNode | null>(null);
   const sourceNodeRef = useRef<MediaStreamAudioSourceNode | null>(null);
   const silentGainRef = useRef<GainNode | null>(null);
+  const finalTranscriptCount = transcript.filter((line) => line.final).length;
+  const tentativeTranscriptCount = transcript.length - finalTranscriptCount;
+  const sessionSnapshot = buildSessionSnapshot({
+    micError,
+    recordingState,
+    socketStatus,
+  });
+  const observabilitySnapshot = buildObservabilitySnapshot({
+    findingsCount: findings.length,
+    metrics,
+    traceCount: traceEvents.length,
+  });
 
   useEffect(() => {
     const socket = new WebSocket(gatewayUrl);
@@ -312,21 +330,53 @@ export default function App() {
             </div>
           </div>
 
+          <div className="session-command-deck">
+            <article className={`session-brief tone-${sessionSnapshot.tone}`}>
+              <span className="session-brief-label">Session state</span>
+              <strong>{sessionSnapshot.label}</strong>
+              <p>{sessionSnapshot.detail}</p>
+            </article>
+            <article className="session-brief tone-muted">
+              <span className="session-brief-label">Connection</span>
+              <strong>{socketStatus}</strong>
+              <p>{socketStatus === 'connected' ? 'Gateway websocket is ready for live or demo sessions.' : 'Waiting for a healthy gateway link.'}</p>
+            </article>
+            <article className="session-brief tone-muted">
+              <span className="session-brief-label">Transcript state</span>
+              <strong>
+                {finalTranscriptCount} final / {tentativeTranscriptCount} tentative
+              </strong>
+              <p>Deepgram partials crystallize into finalized transcript lines here.</p>
+            </article>
+            <article className={`session-brief tone-${observabilitySnapshot.tone}`}>
+              <span className="session-brief-label">Observability</span>
+              <strong>{observabilitySnapshot.label}</strong>
+              <p>{observabilitySnapshot.detail}</p>
+            </article>
+          </div>
+
           <canvas ref={canvasRef} className="waveform" />
 
           <div className="transcript-list">
-            {transcript.map((line) => (
-              <motion.div
-                layout
-                key={line.utteranceId}
-                className={`transcript-line ${line.final ? 'final' : 'partial'}`}
-                initial={{ opacity: 0, y: 8 }}
-                animate={{ opacity: 1, y: 0 }}
-              >
-                <span className="utterance-label">{line.utteranceId}</span>
-                <p>{line.text}</p>
-              </motion.div>
-            ))}
+            {transcript.length === 0 ? (
+              <div className="empty-state-card">
+                <strong>Waiting for transcript activity</strong>
+                <p>Start the mic or run demo mode to watch tentative and finalized utterances arrive.</p>
+              </div>
+            ) : (
+              transcript.map((line) => (
+                <motion.div
+                  layout
+                  key={line.utteranceId}
+                  className={`transcript-line ${line.final ? 'final' : 'partial'}`}
+                  initial={{ opacity: 0, y: 8 }}
+                  animate={{ opacity: 1, y: 0 }}
+                >
+                  <span className="utterance-label">{line.utteranceId}</span>
+                  <p>{line.text}</p>
+                </motion.div>
+              ))
+            )}
           </div>
         </section>
 
@@ -339,18 +389,25 @@ export default function App() {
           </div>
 
           <div className="chart-grid">
-            {findings.map((finding) => (
-              <motion.article
-                layout
-                key={finding.id}
-                className="finding-card"
-                initial={{ opacity: 0, scale: 0.96, y: 20 }}
-                animate={{ opacity: 1, scale: 1, y: 0 }}
-              >
-                <p>{finding.label}</p>
-                <strong>{finding.detail}</strong>
-              </motion.article>
-            ))}
+            {findings.length === 0 ? (
+              <div className="empty-state-card">
+                <strong>No findings committed yet</strong>
+                <p>Structured cards will stage here as soon as the agent validates a clinical extraction.</p>
+              </div>
+            ) : (
+              findings.map((finding) => (
+                <motion.article
+                  layout
+                  key={finding.id}
+                  className="finding-card"
+                  initial={{ opacity: 0, scale: 0.96, y: 20 }}
+                  animate={{ opacity: 1, scale: 1, y: 0 }}
+                >
+                  <p>{finding.label}</p>
+                  <strong>{finding.detail}</strong>
+                </motion.article>
+              ))
+            )}
           </div>
         </section>
 
@@ -367,21 +424,28 @@ export default function App() {
           </div>
 
           <div className="trace-list">
-            {traceEvents.map((event, index) => (
-              <motion.div
-                layout
-                key={`${event.step}-${index}`}
-                className="trace-item"
-                initial={{ opacity: 0, x: 12 }}
-                animate={{ opacity: 1, x: 0 }}
-              >
-                <div className="trace-step-row">
-                  <strong>{event.step}</strong>
-                  {typeof event.confidence === 'number' ? <span>{Math.round(event.confidence * 100)}%</span> : null}
-                </div>
-                <p>{event.detail}</p>
-              </motion.div>
-            ))}
+            {traceEvents.length === 0 ? (
+              <div className="empty-state-card">
+                <strong>Trace is standing by</strong>
+                <p>Tool calls, redaction events, confidence scores, and validation outcomes will appear here.</p>
+              </div>
+            ) : (
+              traceEvents.map((event, index) => (
+                <motion.div
+                  layout
+                  key={`${event.step}-${index}`}
+                  className="trace-item"
+                  initial={{ opacity: 0, x: 12 }}
+                  animate={{ opacity: 1, x: 0 }}
+                >
+                  <div className="trace-step-row">
+                    <strong>{event.step}</strong>
+                    {typeof event.confidence === 'number' ? <span>{Math.round(event.confidence * 100)}%</span> : null}
+                  </div>
+                  <p>{event.detail}</p>
+                </motion.div>
+              ))
+            )}
           </div>
         </aside>
       </main>
@@ -485,4 +549,82 @@ function resolveAgentMode(detail: string): 'unknown' | 'ai-sdk' | 'heuristic' {
   }
 
   return 'unknown';
+}
+
+function buildSessionSnapshot(args: {
+  micError: string | null;
+  recordingState: RecordingState;
+  socketStatus: SocketStatus;
+}): SessionSnapshot {
+  if (args.micError) {
+    return {
+      label: 'Mic attention needed',
+      tone: 'warn',
+      detail: args.micError,
+    };
+  }
+
+  if (args.socketStatus !== 'connected') {
+    return {
+      label: 'Gateway handshake',
+      tone: 'warn',
+      detail:
+        args.socketStatus === 'connecting'
+          ? 'Connecting to the realtime gateway before starting a session.'
+          : 'Gateway disconnected. Reconnect before resuming the chairside flow.',
+    };
+  }
+
+  if (args.recordingState === 'requesting') {
+    return {
+      label: 'Mic permission in progress',
+      tone: 'live',
+      detail: 'Browser access is being requested so live capture can begin.',
+    };
+  }
+
+  if (args.recordingState === 'recording') {
+    return {
+      label: 'Live chairside capture',
+      tone: 'live',
+      detail: 'Microphone audio is streaming to the gateway and provider in realtime.',
+    };
+  }
+
+  if (args.recordingState === 'demo') {
+    return {
+      label: 'Demo narrative',
+      tone: 'muted',
+      detail: 'A scripted transcript is driving the UI so the full workflow can be previewed safely.',
+    };
+  }
+
+  return {
+    label: 'Ready for next session',
+    tone: 'muted',
+    detail: 'The dashboard is connected and waiting for either a live mic session or a demo run.',
+  };
+}
+
+function buildObservabilitySnapshot(args: {
+  findingsCount: number;
+  metrics: Record<string, string>;
+  traceCount: number;
+}): SessionSnapshot {
+  const metricCount = Object.keys(args.metrics).length;
+  const hasSignals = args.traceCount > 0 || metricCount > 0 || args.findingsCount > 0;
+
+  if (!hasSignals) {
+    return {
+      label: 'No runtime signals yet',
+      tone: 'muted',
+      detail: 'Latency metrics, trace cards, and committed findings will accumulate once a session starts.',
+    };
+  }
+
+  return {
+    label: `${args.traceCount} trace • ${metricCount} metrics • ${args.findingsCount} findings`,
+    tone: 'live',
+    detail: 'Realtime instrumentation is active, so session behavior can be inspected without leaving the terminal view.',
+  };
 }

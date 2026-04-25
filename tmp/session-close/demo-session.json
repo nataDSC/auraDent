@@ -1,118 +1,74 @@
 {
   "sessionId": "demo-session",
   "patientId": "demo-patient",
-  "closedAt": "2026-04-25T19:33:11.510Z",
+  "closedAt": "2026-04-25T20:36:26.186Z",
   "transcript": {
-    "finalText": "Patients James Brown. Phone number, [PHONE]. Has four millimeter pockets on tooth 14."
+    "finalText": "Patient [PATIENT_NAME] number, [PHONE]. His three millimeter pockets on the fourth tooth."
   },
-  "structuredFindings": [
-    {
-      "toothNumber": 14,
-      "probingDepthMm": 4,
-      "bleedingOnProbing": false,
-      "confidence": 1,
-      "sourceUtteranceId": "utt-7730"
-    }
-  ],
+  "structuredFindings": [],
   "artifacts": {
     "trace": [
       {
         "step": "deepgram.connected",
         "detail": "Deepgram live transcription websocket opened.",
         "confidence": 0.99,
-        "ts": "2026-04-25T19:32:23.151Z"
+        "ts": "2026-04-25T20:32:56.040Z"
       },
       {
         "step": "transcript.finalized",
-        "detail": "Deepgram finalized utterance utt-420.",
-        "confidence": 0.98706055,
-        "ts": "2026-04-25T19:32:30.960Z"
+        "detail": "Deepgram finalized utterance utt-4020.",
+        "confidence": 0.9892578,
+        "ts": "2026-04-25T20:33:06.389Z"
       },
       {
         "step": "redaction.applied",
-        "detail": "PII redacted for finalized utterance utt-420 before agent handoff: phone x1.",
+        "detail": "PII redacted for finalized utterance utt-4020 before agent handoff: phone x1, patient_name x1.",
         "confidence": 0.98,
-        "ts": "2026-04-25T19:32:30.962Z"
+        "ts": "2026-04-25T20:33:06.390Z"
       },
       {
         "step": "transcript.finalized",
-        "detail": "Deepgram finalized utterance utt-7730.",
-        "confidence": 0.9970703,
-        "ts": "2026-04-25T19:32:34.287Z"
+        "detail": "Deepgram finalized utterance utt-10300.",
+        "confidence": 0.9863281,
+        "ts": "2026-04-25T20:33:07.401Z"
       },
       {
-        "step": "agent.handoff",
-        "detail": "Handing finalized utterance utt-7730 to the clinical agent.",
-        "confidence": 0.97,
-        "ts": "2026-04-25T19:32:34.287Z"
+        "step": "transcript.finalized",
+        "detail": "Deepgram finalized utterance utt-11320.",
+        "confidence": 0.9980469,
+        "ts": "2026-04-25T20:33:08.941Z"
       },
       {
-        "step": "agent.started",
-        "detail": "AI SDK agent started for utterance utt-7730.",
-        "confidence": 0.98,
-        "ts": "2026-04-25T19:32:37.815Z"
+        "step": "agent.deferred",
+        "detail": "Deferred structured extraction for utterance utt-11320 until an explicit tooth reference is available.",
+        "confidence": 0.88,
+        "ts": "2026-04-25T20:33:08.942Z"
       },
       {
-        "step": "agent.mode",
-        "detail": "Extraction mode: ai-sdk.",
-        "confidence": 0.98,
-        "ts": "2026-04-25T19:32:37.815Z"
+        "step": "transcript.finalized",
+        "detail": "Deepgram finalized utterance utt-12870.",
+        "confidence": 0.99902344,
+        "ts": "2026-04-25T20:33:11.422Z"
       },
       {
-        "step": "tool.called",
-        "detail": "check_patient_history invoked for clinical context.",
-        "confidence": 0.97,
-        "ts": "2026-04-25T19:32:37.815Z"
-      },
-      {
-        "step": "tool.result",
-        "detail": "check_patient_history returned mock history context.",
-        "confidence": 0.97,
-        "ts": "2026-04-25T19:32:37.815Z"
-      },
-      {
-        "step": "agent.context",
-        "detail": "AI SDK context pass completed before structured extraction.",
-        "confidence": 0.96,
-        "ts": "2026-04-25T19:32:37.815Z"
-      },
-      {
-        "step": "schema.validated",
-        "detail": "AI SDK structured output validated against AgentExtractionSchema.",
-        "confidence": 0.98,
-        "ts": "2026-04-25T19:32:37.815Z"
-      },
-      {
-        "step": "tool.called",
-        "detail": "update_perio_chart invoked with 1 finding.",
-        "confidence": 1,
-        "ts": "2026-04-25T19:32:37.815Z"
-      },
-      {
-        "step": "tool.result",
-        "detail": "update_perio_chart validated the extracted findings.",
-        "confidence": 1,
-        "ts": "2026-04-25T19:32:37.815Z"
-      },
-      {
-        "step": "agent.completed",
-        "detail": "AI SDK extraction produced 1 structured finding.",
-        "confidence": 1,
-        "ts": "2026-04-25T19:32:37.815Z"
+        "step": "agent.deferred",
+        "detail": "Deferred structured extraction for utterance utt-12870 until an explicit tooth reference is available.",
+        "confidence": 0.88,
+        "ts": "2026-04-25T20:33:11.423Z"
       },
       {
         "step": "deepgram.closed",
         "detail": "Deepgram live transcription websocket closed.",
         "confidence": 0.92,
-        "ts": "2026-04-25T19:33:11.444Z"
+        "ts": "2026-04-25T20:36:26.117Z"
       }
     ],
     "metrics": [
       {
         "name": "ttft",
-        "value": 194,
+        "value": 251,
         "unit": "ms",
-        "ts": "2026-04-25T19:32:23.152Z"
+        "ts": "2026-04-25T20:32:56.040Z"
       }
     ]
   }

@@ -180,6 +180,61 @@ body {
   flex-wrap: wrap;
 }
 
+.session-command-deck {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 12px;
+  margin: 18px 0 20px;
+}
+
+.session-brief,
+.empty-state-card {
+  border-radius: 18px;
+  border: 1px solid rgba(136, 201, 226, 0.12);
+  background: rgba(16, 39, 51, 0.74);
+  padding: 16px;
+}
+
+.session-brief {
+  background:
+    linear-gradient(180deg, rgba(146, 223, 255, 0.05), rgba(10, 25, 34, 0.84)),
+    rgba(16, 39, 51, 0.74);
+}
+
+.session-brief-label {
+  display: block;
+  margin-bottom: 8px;
+  color: #76acc3;
+  font-size: 0.76rem;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.session-brief strong,
+.empty-state-card strong {
+  display: block;
+  margin-bottom: 8px;
+}
+
+.session-brief p,
+.empty-state-card p {
+  margin: 0;
+  color: #9cc7da;
+  line-height: 1.5;
+}
+
+.tone-live {
+  border-color: rgba(87, 232, 170, 0.2);
+}
+
+.tone-muted {
+  border-color: rgba(136, 201, 226, 0.12);
+}
+
+.tone-warn {
+  border-color: rgba(244, 190, 101, 0.22);
+}
+
 .metric-chip {
   display: inline-flex;
   flex-direction: column;
@@ -242,6 +297,10 @@ body {
   margin-top: 18px;
 }
 
+.chart-grid > .empty-state-card {
+  min-height: 130px;
+}
+
 .finding-card {
   padding: 18px;
   min-height: 130px;
@@ -268,6 +327,11 @@ body {
 
 .trace-item {
   padding: 16px;
+}
+
+.transcript-list > .empty-state-card,
+.trace-list > .empty-state-card {
+  min-height: 112px;
 }
 
 .trace-step-row {

@@ -78,6 +78,13 @@ export AURADENT_AWS_REGION=us-west-2
 export AURADENT_SESSION_CLOSE_QUEUE_URL=PASTE_QUEUE_URL_HERE
 ```
 
+If you want the worker to persist to PostgreSQL instead of the local file fallback, also set:
+
+```bash
+export AURADENT_DATABASE_URL=postgres://user:password@host:5432/auradent
+export AURADENT_DATABASE_SSL=disable
+```
+
 11. Restart the local gateway and frontend.
 
 ```bash
@@ -92,6 +99,47 @@ Expected checks:
 - the gateway terminal shows a successful SQS publish
 - the Lambda worker executes from the SQS trigger
 - CloudWatch Logs show the worker processing the payload
+- if `AURADENT_DATABASE_URL` is unset, the worker persists to `AURADENT_PERSISTENCE_FILE` or `/tmp/auradent-session-records.jsonl`
+
+## Local Worker Testing
+
+If you have not deployed to AWS yet, you can still run the worker locally against a saved `SessionClosePayload` JSON file:
+
+```bash
+npm run run:worker-local --workspace @auradent/worker -- /absolute/path/to/session-close-payload.json
+```
+
+Or from the repo root:
+
+```bash
+npm run run:worker-local -- /absolute/path/to/session-close-payload.json
+```
+
+The gateway also saves local replay files on `session.stop`:
+
+- latest payload: [/Users/nataliep/Documents/New project/tmp/session-close/latest-session-close.json](/Users/nataliep/Documents/New%20project/tmp/session-close/latest-session-close.json)
+- per-session payloads: [/Users/nataliep/Documents/New project/tmp/session-close](/Users/nataliep/Documents/New%20project/tmp/session-close)
+
+So the fastest local replay flow is:
+
+```bash
+npm run run:worker-local -- "/Users/nataliep/Documents/New project/tmp/session-close/latest-session-close.json"
+```
+
+For local file persistence:
+
+```bash
+export AURADENT_PERSISTENCE_FILE=/Users/nataliep/Documents/New\ project/tmp/auradent-session-records.jsonl
+```
+
+For local PostgreSQL persistence:
+
+```bash
+export AURADENT_DATABASE_URL=postgres://user:password@localhost:5432/auradent
+export AURADENT_DATABASE_SSL=disable
+```
+
+The local worker uses the same enrichment and persistence path as the Lambda worker.
 
 ## Teardown
 

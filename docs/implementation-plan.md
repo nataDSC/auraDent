@@ -71,7 +71,9 @@ Status legend:
 - `Completed` Replace the inline CDK Lambda placeholder with a bundled `apps/worker` artifact in CDK.
 - `Completed` Add post-op PDF generation stub in the worker flow.
 - `Completed` Add mock insurance pre-authorization flow stub in the worker.
-- `In Progress` Add final PostgreSQL persistence contract and persistence-ready enriched session record assembly.
+- `Completed` Add persistence-ready enriched session record assembly in the worker.
+- `Completed` Add worker persistence adapter with PostgreSQL and local-file fallback modes.
+- `In Progress` Harden production PostgreSQL rollout, migrations, and artifact persistence.
 
 ### Stage 7: Verification and hardening
 

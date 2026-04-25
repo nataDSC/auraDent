@@ -5,14 +5,17 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "run:local": "tsx src/local-runner.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@auradent/ingestion": "file:../../packages/ingestion",
-    "@auradent/shared": "file:../../packages/shared"
+    "@auradent/shared": "file:../../packages/shared",
+    "pg": "^8.16.3"
   },
   "devDependencies": {
     "@types/aws-lambda": "^8.10.149",
+    "@types/pg": "^8.15.5",
     "typescript": "^5.8.3"
   }
 }

@@ -72,11 +72,12 @@ This scaffold now includes a runnable local demo path:
 - `Completed` Session-close payload assembly in the gateway, including redacted final transcript, structured findings, trace artifacts, and metrics capture.
 - `Completed` Gateway SQS publisher wiring for real session-close enqueue when AWS credentials and queue env vars are present.
 - `Completed` Worker enrichment stubs for post-op PDF generation, mock insurance pre-authorization, and persistence-ready session record assembly.
+- `Completed` Worker persistence adapter with PostgreSQL write path and local JSONL fallback for development.
 - `In Progress` Dependency installation and full workspace verification.
 - `In Progress` Deepgram live transcription wiring and end-to-end session lifecycle shape.
 - `In Progress` Vercel AI SDK orchestration with mock practice-management tools and heuristic fallback.
 - `In Progress` AWS deployment wiring from queue to bundled worker artifact, pending dependency install and `cdk` deployment.
-- `In Progress` PostgreSQL persistence, PDF generation, and insurance pre-auth flow.
+- `In Progress` Production PostgreSQL rollout and downstream artifact persistence hardening.
 
 ### Run Current Stage
 
@@ -130,6 +131,27 @@ npm run build
 ```
 
 Automated tests are not implemented yet, so there is no `npm test` command at this stage.
+
+For local async-worker testing without AWS, you can run the worker directly against a saved session-close payload:
+
+```bash
+npm run run:worker-local -- /absolute/path/to/session-close-payload.json
+```
+
+The gateway now saves each session-close payload locally as well:
+
+- latest payload: [/Users/nataliep/Documents/New project/tmp/session-close/latest-session-close.json](/Users/nataliep/Documents/New%20project/tmp/session-close/latest-session-close.json)
+- per-session payloads: [/Users/nataliep/Documents/New project/tmp/session-close](/Users/nataliep/Documents/New%20project/tmp/session-close)
+
+You can override that directory with `AURADENT_SESSION_CLOSE_OUTPUT_DIR`.
+
+The quickest local replay command is:
+
+```bash
+npm run run:worker-local -- "/Users/nataliep/Documents/New project/tmp/session-close/latest-session-close.json"
+```
+
+With no `AURADENT_DATABASE_URL`, the worker writes to `AURADENT_PERSISTENCE_FILE` or `/tmp/auradent-session-records.jsonl`. With `AURADENT_DATABASE_URL` set, it writes to PostgreSQL instead.
 
 The detailed stage-by-stage checklist lives in [docs/implementation-plan.md](/Users/nataliep/Documents/New%20project/docs/implementation-plan.md).
 

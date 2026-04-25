@@ -10,6 +10,7 @@ import {
   type SessionClosePayload,
 } from '@auradent/shared';
 import { existsSync, readFileSync } from 'node:fs';
+import { mkdir, writeFile } from 'node:fs/promises';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import WebSocket from 'ws';
@@ -750,6 +751,7 @@ async function publishSessionClose({
     },
   };
 
+  await writeSessionClosePayloadToDisk(payload);
   const publisher = createSessionClosePublisher();
   try {
     await publisher.publish(payload);
@@ -808,6 +810,23 @@ function createSessionClosePublisher() {
       );
     },
   };
+}
+
+async function writeSessionClosePayloadToDisk(payload: SessionClosePayload) {
+  const directory =
+    process.env.AURADENT_SESSION_CLOSE_OUTPUT_DIR ??
+    path.resolve(__dirname, '../../../tmp/session-close');
+
+  await mkdir(directory, { recursive: true });
+
+  const contents = `${JSON.stringify(payload, null, 2)}\n`;
+  const latestPath = path.join(directory, 'latest-session-close.json');
+  const sessionPath = path.join(directory, `${payload.sessionId}.json`);
+
+  await Promise.all([
+    writeFile(latestPath, contents, 'utf8'),
+    writeFile(sessionPath, contents, 'utf8'),
+  ]);
 }
 
 function trackExtraction(state: GatewaySessionState, promise: Promise<void>) {

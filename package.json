@@ -12,6 +12,7 @@
     "build": "npm run build --workspaces --if-present",
     "dev:web": "npm run dev --workspace @auradent/web",
     "dev:gateway": "npm run dev --workspace @auradent/gateway",
+    "run:worker-local": "npm run run:local --workspace @auradent/worker",
     "typecheck": "npm run typecheck --workspaces --if-present"
   },
   "devDependencies": {

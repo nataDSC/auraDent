@@ -1,6 +1,7 @@
 import Fastify, { type FastifyRequest } from 'fastify';
 import cors from '@fastify/cors';
 import websocket from '@fastify/websocket';
+import { SendMessageCommand, SQSClient } from '@aws-sdk/client-sqs';
 import { runClinicalAgent } from '@auradent/agent-core';
 import {
   redactTranscriptPII,
@@ -8,6 +9,9 @@ import {
   type RealtimeEvent,
   type SessionClosePayload,
 } from '@auradent/shared';
+import { existsSync, readFileSync } from 'node:fs';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
 import WebSocket from 'ws';
 
 type SocketMessage = string | Buffer | ArrayBuffer | Buffer[];
@@ -16,7 +20,12 @@ type GatewaySessionState = {
   audioInterval?: NodeJS.Timeout;
   deepgramSocket?: WebSocket;
   deepgramKeepAlive?: NodeJS.Timeout;
+  completedExtractionSequence: number;
+  extractionChain: Promise<void>;
+  extractionSequence: number;
+  isStopping: boolean;
   lastAudioAt?: number;
+  pendingExtractions: Set<Promise<void>>;
   transcriptCounter: number;
   demoTimers: NodeJS.Timeout[];
   finalizedUtterances: Array<{
@@ -63,6 +72,11 @@ type DeepgramTranscriptMessage = {
   };
 };
 
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+
+loadLocalEnvFiles();
+
 const app = Fastify({ logger: true });
 
 await app.register(cors, { origin: true });
@@ -79,12 +93,17 @@ app.register(async (instance) => {
   instance.get('/realtime/session/:sessionId', { websocket: true }, (socket, request) => {
     const sessionId = String((request.params as { sessionId: string }).sessionId);
     const state: GatewaySessionState = {
+      completedExtractionSequence: 0,
       transcriptCounter: 0,
       demoTimers: [],
+      extractionChain: Promise.resolve(),
+      extractionSequence: 0,
+      isStopping: false,
       finalizedUtterances: [],
       traceEvents: [],
       metrics: [],
       findings: [],
+      pendingExtractions: new Set(),
     };
 
     const send = (event: RealtimeEvent) => {
@@ -170,7 +189,25 @@ app.register(async (instance) => {
           teardownSession(state);
           resetSessionArtifacts(state);
 
-          if (payload.mode === 'live' && payload.audio?.sampleRate && process.env.DEEPGRAM_API_KEY) {
+          if (payload.mode === 'live') {
+            if (!process.env.DEEPGRAM_API_KEY) {
+              sendTrace(
+                'session.mode.error',
+                'Live microphone mode requires DEEPGRAM_API_KEY. The gateway stayed idle instead of falling back to demo.',
+                0.2,
+              );
+              return;
+            }
+
+            if (!payload.audio?.sampleRate) {
+              sendTrace(
+                'session.mode.error',
+                'Live microphone mode was requested without audio sample rate metadata.',
+                0.2,
+              );
+              return;
+            }
+
             startLiveSession({
               audioSampleRate: payload.audio.sampleRate,
               request,
@@ -187,8 +224,11 @@ app.register(async (instance) => {
         }
 
         if (payload.type === 'session.stop') {
+          state.isStopping = true;
           stopDemoSession(state);
           finalizeDeepgram(state);
+          await waitForRealtimeSettle();
+          await waitForPendingExtractions(state);
           await publishSessionClose({
             request,
             sendTrace,
@@ -240,8 +280,21 @@ function startDemoSession({
   }, 180);
 
   const transcriptScript = [
-    { utteranceId: 'utt-001', partial: 'Patient has four millimeter', final: 'Patient has four millimeter pockets' },
-    { utteranceId: 'utt-002', partial: 'on tooth fourteen', final: 'on tooth fourteen with bleeding on probing.' },
+    {
+      utteranceId: 'utt-001',
+      partial: 'Patient James Brown. Phone number',
+      final: 'Patient James Brown. Phone number, 415-555-1212.',
+    },
+    {
+      utteranceId: 'utt-002',
+      partial: 'Has four millimeter',
+      final: 'Has four millimeter pockets',
+    },
+    {
+      utteranceId: 'utt-003',
+      partial: 'on tooth 14',
+      final: 'on tooth 14 with bleeding on probing.',
+    },
   ];
 
   send({
@@ -280,7 +333,7 @@ function startDemoSession({
 
         if (index === transcriptScript.length - 1) {
           const transcriptWindow = getTranscriptWindow(state, item.utteranceId);
-          void emitStructuredFindings({
+          queueExtraction(state, () => emitStructuredFindings({
             send,
             sendTrace,
             sessionId: 'demo-session',
@@ -290,7 +343,7 @@ function startDemoSession({
           }).catch((error) => {
             request.log.error({ error }, 'Failed to emit structured demo findings');
             sendTrace('agent.error', 'Clinical agent failed during demo extraction.', 0.3);
-          });
+          }));
 
           send({
             type: 'metric',
@@ -397,7 +450,7 @@ function startLiveSession({
 
     if (parsed.is_final) {
       const transcriptWindow = getTranscriptWindow(state, utteranceId);
-      void emitStructuredFindings({
+      queueExtraction(state, () => emitStructuredFindings({
         send,
         sendTrace,
         sessionId,
@@ -407,7 +460,7 @@ function startLiveSession({
       }).catch((error) => {
         request.log.error({ error }, 'Failed to emit structured live findings');
         sendTrace('agent.error', `Clinical agent failed for utterance ${utteranceId}.`, 0.3);
-      });
+      }));
     }
   });
 
@@ -535,6 +588,11 @@ function stopDemoSession(state: GatewaySessionState) {
 }
 
 function resetSessionArtifacts(state: GatewaySessionState) {
+  state.completedExtractionSequence = 0;
+  state.extractionChain = Promise.resolve();
+  state.extractionSequence = 0;
+  state.isStopping = false;
+  state.pendingExtractions = new Set();
   state.transcriptCounter = 0;
   state.finalizedUtterances = [];
   state.traceEvents = [];
@@ -660,16 +718,35 @@ async function publishSessionClose({
 
 function createSessionClosePublisher() {
   const queueUrl = process.env.AURADENT_SESSION_CLOSE_QUEUE_URL;
+  const awsRegion = process.env.AURADENT_AWS_REGION ?? process.env.AWS_REGION ?? 'us-west-2';
+  const sqsClient = queueUrl ? new SQSClient({ region: awsRegion }) : null;
 
   return {
     publish: async (payload: SessionClosePayload) => {
-      if (queueUrl) {
-        // SQS integration is intentionally stubbed until AWS credentials and SDK wiring are added.
+      if (queueUrl && sqsClient) {
+        await sqsClient.send(
+          new SendMessageCommand({
+            QueueUrl: queueUrl,
+            MessageBody: JSON.stringify(payload),
+            MessageAttributes: {
+              sessionId: {
+                DataType: 'String',
+                StringValue: payload.sessionId,
+              },
+              patientId: {
+                DataType: 'String',
+                StringValue: payload.patientId,
+              },
+            },
+          }),
+        );
+
         console.log(
           JSON.stringify({
             level: 'info',
-            message: 'Session close payload ready for SQS publish',
+            message: 'Session close payload published to SQS',
             queueUrl,
+            region: awsRegion,
             sessionId: payload.sessionId,
             findings: payload.structuredFindings.length,
           }),
@@ -687,4 +764,92 @@ function createSessionClosePublisher() {
       );
     },
   };
+}
+
+function trackExtraction(state: GatewaySessionState, promise: Promise<void>) {
+  state.pendingExtractions.add(promise);
+  promise.finally(() => {
+    state.pendingExtractions.delete(promise);
+  });
+}
+
+function queueExtraction(state: GatewaySessionState, run: () => Promise<void>) {
+  const sequence = state.extractionSequence + 1;
+  state.extractionSequence = sequence;
+
+  const queued = state.extractionChain.then(async () => {
+    await run();
+    state.completedExtractionSequence = sequence;
+  });
+
+  state.extractionChain = queued.catch(() => undefined);
+  trackExtraction(state, queued);
+}
+
+async function waitForPendingExtractions(state: GatewaySessionState) {
+  while (
+    state.pendingExtractions.size > 0 ||
+    state.completedExtractionSequence < state.extractionSequence
+  ) {
+    await Promise.allSettled(Array.from(state.pendingExtractions));
+    await state.extractionChain;
+  }
+}
+
+async function waitForRealtimeSettle() {
+  await delay(350);
+}
+
+function delay(ms: number) {
+  return new Promise<void>((resolve) => {
+    setTimeout(resolve, ms);
+  });
+}
+
+function loadLocalEnvFiles() {
+  const repoRoot = path.resolve(__dirname, '../../..');
+  const candidatePaths = [
+    path.join(repoRoot, '.env'),
+    path.join(repoRoot, '.env.local'),
+    path.join(__dirname, '../.env'),
+    path.join(__dirname, '../.env.local'),
+  ];
+
+  for (const filePath of candidatePaths) {
+    if (!existsSync(filePath)) {
+      continue;
+    }
+
+    const contents = readFileSync(filePath, 'utf8');
+    for (const line of contents.split(/\r?\n/)) {
+      const trimmed = line.trim();
+      if (!trimmed || trimmed.startsWith('#')) {
+        continue;
+      }
+
+      const separatorIndex = trimmed.indexOf('=');
+      if (separatorIndex < 1) {
+        continue;
+      }
+
+      const key = trimmed.slice(0, separatorIndex).trim();
+      const rawValue = trimmed.slice(separatorIndex + 1).trim();
+      if (!key || process.env[key] !== undefined) {
+        continue;
+      }
+
+      process.env[key] = stripEnvWrappingQuotes(rawValue);
+    }
+  }
+}
+
+function stripEnvWrappingQuotes(value: string) {
+  if (
+    (value.startsWith('"') && value.endsWith('"')) ||
+    (value.startsWith("'") && value.endsWith("'"))
+  ) {
+    return value.slice(1, -1);
+  }
+
+  return value;
 }

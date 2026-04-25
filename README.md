@@ -70,10 +70,11 @@ This scaffold now includes a runnable local demo path:
 - `Completed` Visible agent lifecycle trace with extraction mode, handoff, tool, and completion events.
 - `Completed` Starter ingestion normalization, worker entrypoint, and CDK async infrastructure scaffold.
 - `Completed` Session-close payload assembly in the gateway, including redacted final transcript, structured findings, trace artifacts, and metrics capture.
+- `Completed` Gateway SQS publisher wiring for real session-close enqueue when AWS credentials and queue env vars are present.
 - `In Progress` Dependency installation and full workspace verification.
 - `In Progress` Deepgram live transcription wiring and end-to-end session lifecycle shape.
 - `In Progress` Vercel AI SDK orchestration with mock practice-management tools and heuristic fallback.
-- `In Progress` Queue publishing from the gateway to the async backend, with a local publisher stub and SQS-ready env shape.
+- `In Progress` AWS deployment wiring from queue to bundled worker artifact, pending dependency install and `cdk` deployment.
 - `Planned` PostgreSQL persistence, PDF generation, and insurance pre-auth flow.
 
 ### Run Current Stage
@@ -108,6 +109,7 @@ export DEEPGRAM_API_KEY=your_key_here
 export DEEPGRAM_MODEL=nova-3
 export AI_GATEWAY_API_KEY=your_key_here
 export AURADENT_AGENT_MODEL=openai/gpt-4.1-mini
+export AURADENT_AWS_REGION=us-west-2
 export AURADENT_SESSION_CLOSE_QUEUE_URL=your_queue_url_here
 npm run dev:gateway
 ```
@@ -159,17 +161,33 @@ export DEEPGRAM_API_KEY=your_key_here
 export DEEPGRAM_MODEL=nova-3
 export AI_GATEWAY_API_KEY=your_key_here
 export AURADENT_AGENT_MODEL=openai/gpt-4.1-mini
+export AURADENT_AWS_REGION=us-west-2
 export AURADENT_SESSION_CLOSE_QUEUE_URL=your_queue_url_here
 npm run dev:gateway
 ```
 
-If `AURADENT_SESSION_CLOSE_QUEUE_URL` is unset, the gateway logs the full session-close payload locally on `session.stop`. If it is set, the gateway currently logs an SQS-ready publish message and preserves the queue contract while the real AWS SDK send step is still being wired.
+If `AURADENT_SESSION_CLOSE_QUEUE_URL` is unset, the gateway logs the full session-close payload locally on `session.stop`. If it is set, the gateway now attempts a real SQS `SendMessage` using the current AWS credentials and `AURADENT_AWS_REGION` or `AWS_REGION`.
+
+To synthesize or deploy the async stack after installing dependencies:
+
+```bash
+npm run synth --workspace @auradent/aws-infra
+```
+
+```bash
+npm run deploy --workspace @auradent/aws-infra
+```
+
+```bash
+npm run destroy --workspace @auradent/aws-infra
+```
 
 ## Key Deliverables In This Repo
 
 - Product and system design doc: [docs/auradent-design-doc.md](/Users/nataliep/Documents/New%20project/docs/auradent-design-doc.md)
 - Investor-facing brief: [docs/auradent-investor-brief.md](/Users/nataliep/Documents/New%20project/docs/auradent-investor-brief.md)
 - Implementation plan: [docs/implementation-plan.md](/Users/nataliep/Documents/New%20project/docs/implementation-plan.md)
+- AWS deployment guide: [infra/aws/aws_deployment.md](/Users/nataliep/Documents/New%20project/infra/aws/aws_deployment.md)
 
 ## MVP Focus
 

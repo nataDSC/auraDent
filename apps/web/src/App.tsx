@@ -216,7 +216,9 @@ export default function App() {
   }
 
   function startDemoMode() {
-    stopStreaming();
+    if (recordingState !== 'idle') {
+      stopStreaming();
+    }
     resetSessionView();
     setMicError(null);
     setRecordingState('demo');
@@ -236,7 +238,9 @@ export default function App() {
     audioContextRef.current = null;
     mediaStreamRef.current = null;
 
-    sendClientMessage({ type: 'session.stop' });
+    if (recordingState !== 'idle') {
+      sendClientMessage({ type: 'session.stop' });
+    }
     setRecordingState('idle');
     setAudioLevel(0.08);
   }

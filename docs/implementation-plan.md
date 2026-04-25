@@ -39,7 +39,7 @@ Status legend:
 - `In Progress` Add Deepgram streaming integration.
 - `Planned` Add transcript revision reconciliation for provider partials and finals.
 - `Completed` Add session-close payload assembly with redacted transcript, structured findings, trace, and metrics capture.
-- `In Progress` Add queue publishing from the gateway into the async backend.
+- `Completed` Add real SQS queue publishing from the gateway when AWS env and credentials are present.
 
 ### Stage 4: Agentic core and safety
 
@@ -68,7 +68,7 @@ Status legend:
 - `Completed` Add SQS, DLQ, and queue-to-worker infrastructure scaffold in CDK.
 - `In Progress` Define the end-to-end session-close processing shape across gateway, queue, worker, and storage.
 - `Completed` Define and emit the session-close payload contract from the gateway into a local publisher stub.
-- `Planned` Replace the inline CDK Lambda placeholder with the built `apps/worker` artifact.
+- `Completed` Replace the inline CDK Lambda placeholder with a bundled `apps/worker` artifact in CDK.
 - `Planned` Add post-op PDF generation.
 - `Planned` Add mock insurance pre-authorization flow.
 - `Planned` Add final PostgreSQL persistence.

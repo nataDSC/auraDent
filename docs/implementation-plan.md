@@ -69,9 +69,9 @@ Status legend:
 - `In Progress` Define the end-to-end session-close processing shape across gateway, queue, worker, and storage.
 - `Completed` Define and emit the session-close payload contract from the gateway into a local publisher stub.
 - `Completed` Replace the inline CDK Lambda placeholder with a bundled `apps/worker` artifact in CDK.
-- `Planned` Add post-op PDF generation.
-- `Planned` Add mock insurance pre-authorization flow.
-- `Planned` Add final PostgreSQL persistence.
+- `Completed` Add post-op PDF generation stub in the worker flow.
+- `Completed` Add mock insurance pre-authorization flow stub in the worker.
+- `In Progress` Add final PostgreSQL persistence contract and persistence-ready enriched session record assembly.
 
 ### Stage 7: Verification and hardening
 

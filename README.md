@@ -71,11 +71,12 @@ This scaffold now includes a runnable local demo path:
 - `Completed` Starter ingestion normalization, worker entrypoint, and CDK async infrastructure scaffold.
 - `Completed` Session-close payload assembly in the gateway, including redacted final transcript, structured findings, trace artifacts, and metrics capture.
 - `Completed` Gateway SQS publisher wiring for real session-close enqueue when AWS credentials and queue env vars are present.
+- `Completed` Worker enrichment stubs for post-op PDF generation, mock insurance pre-authorization, and persistence-ready session record assembly.
 - `In Progress` Dependency installation and full workspace verification.
 - `In Progress` Deepgram live transcription wiring and end-to-end session lifecycle shape.
 - `In Progress` Vercel AI SDK orchestration with mock practice-management tools and heuristic fallback.
 - `In Progress` AWS deployment wiring from queue to bundled worker artifact, pending dependency install and `cdk` deployment.
-- `Planned` PostgreSQL persistence, PDF generation, and insurance pre-auth flow.
+- `In Progress` PostgreSQL persistence, PDF generation, and insurance pre-auth flow.
 
 ### Run Current Stage
 

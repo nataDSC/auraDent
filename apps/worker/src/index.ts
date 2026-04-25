@@ -1,5 +1,10 @@
 import type { SQSEvent, SQSHandler } from 'aws-lambda';
-import { normalizeExtraction } from '@auradent/ingestion';
+import {
+  buildPersistableSessionRecord,
+  generatePostOpInstructionArtifact,
+  normalizeExtraction,
+  simulateInsurancePreAuthorization,
+} from '@auradent/ingestion';
 import { AgentExtractionSchema, type SessionClosePayload } from '@auradent/shared';
 
 export const handler: SQSHandler = async (event: SQSEvent) => {
@@ -15,12 +20,24 @@ export const handler: SQSHandler = async (event: SQSEvent) => {
     });
 
     const normalized = normalizeExtraction(extraction);
+    const postOpInstruction = generatePostOpInstructionArtifact(payload, normalized);
+    const insurancePreAuthorization = simulateInsurancePreAuthorization(payload, normalized);
+    const persistableRecord = buildPersistableSessionRecord({
+      payload,
+      normalizedFindings: normalized,
+      postOpInstruction,
+      insurancePreAuthorization,
+    });
+
     console.log(
       JSON.stringify({
         level: 'info',
-        message: 'Processed session close payload',
+        message: 'Processed session close payload into enriched async record',
         sessionId: payload.sessionId,
         findings: normalized.length,
+        postOpFile: postOpInstruction.fileName,
+        insuranceStatus: insurancePreAuthorization.status,
+        persistableRecord,
       }),
     );
   }

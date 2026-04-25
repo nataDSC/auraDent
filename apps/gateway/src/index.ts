@@ -518,6 +518,17 @@ async function emitStructuredFindings({
     );
   }
 
+  if (!isReadyForStructuredExtraction(redaction.text)) {
+    if (hasClinicalSignal(redaction.text)) {
+      sendTrace(
+        'agent.deferred',
+        `Deferred structured extraction for utterance ${utteranceId} until an explicit tooth reference is available.`,
+        0.88,
+      );
+    }
+    return;
+  }
+
   sendTrace('agent.handoff', `Handing finalized utterance ${utteranceId} to the clinical agent.`, 0.97);
 
   const result = await runClinicalAgent({
@@ -679,6 +690,39 @@ function summarizeRedactions(
   return Array.from(counts.entries())
     .map(([entityType, count]) => `${entityType} x${count}`)
     .join(', ');
+}
+
+function hasClinicalSignal(transcript: string) {
+  const normalized = transcript.toLowerCase();
+
+  return (
+    /\b\d+\s*(?:millimeter|mm)\b/.test(normalized) ||
+    normalized.includes('pocket') ||
+    normalized.includes('probing') ||
+    normalized.includes('bleeding') ||
+    normalized.includes('recession') ||
+    normalized.includes('mobility') ||
+    normalized.includes('furcation')
+  );
+}
+
+function isReadyForStructuredExtraction(transcript: string) {
+  const normalized = transcript.toLowerCase();
+  if (!hasClinicalSignal(normalized)) {
+    return false;
+  }
+
+  return hasExplicitToothReference(normalized);
+}
+
+function hasExplicitToothReference(transcript: string) {
+  if (/\btooth\s+#?\d{1,2}\b/.test(transcript) || /#\d{1,2}\b/.test(transcript)) {
+    return true;
+  }
+
+  return /\btooth\s+(one|two|three|four|five|six|seven|eight|nine|ten|eleven|twelve|thirteen|fourteen|fifteen|sixteen|seventeen|eighteen|nineteen|twenty|twenty[- ]one|twenty[- ]two|twenty[- ]three|twenty[- ]four|twenty[- ]five|twenty[- ]six|twenty[- ]seven|twenty[- ]eight|twenty[- ]nine|thirty|thirty[- ]one|thirty[- ]two)\b/.test(
+    transcript,
+  );
 }
 
 async function publishSessionClose({

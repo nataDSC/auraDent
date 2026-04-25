@@ -5,6 +5,8 @@
   "type": "module",
   "scripts": {
     "build": "tsc -p tsconfig.json",
+    "migrate:local": "tsx src/migrate.ts",
+    "readback:local": "tsx src/readback.ts",
     "run:local": "tsx src/local-runner.ts",
     "typecheck": "tsc --noEmit"
   },

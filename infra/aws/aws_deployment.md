@@ -141,6 +141,26 @@ export AURADENT_DATABASE_SSL=disable
 
 The local worker uses the same enrichment and persistence path as the Lambda worker.
 
+To initialize the local AuraDent session table explicitly:
+
+```bash
+npm run migrate:worker-local
+```
+
+To inspect persisted records:
+
+```bash
+npm run readback:worker-local
+```
+
+To inspect one session:
+
+```bash
+npm run readback:worker-local -- demo-session
+```
+
+The checked-in SQL migration lives at [001_create_auradent_session_records.sql](/Users/nataliep/Documents/New%20project/apps/worker/sql/001_create_auradent_session_records.sql).
+
 ## Teardown
 
 To remove the AuraDent async stack resources from AWS:

@@ -1,7 +1,10 @@
 import { readFile } from 'node:fs/promises';
 import process from 'node:process';
 import type { SessionClosePayload } from '@auradent/shared';
+import { loadWorkerLocalEnv } from './load-local-env';
 import { processSessionClosePayload, withSessionPersistence } from './process-session-close';
+
+loadWorkerLocalEnv();
 
 async function main() {
   const payload = await readPayload();

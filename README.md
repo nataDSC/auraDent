@@ -153,6 +153,22 @@ npm run run:worker-local -- "/Users/nataliep/Documents/New project/tmp/session-c
 
 With no `AURADENT_DATABASE_URL`, the worker writes to `AURADENT_PERSISTENCE_FILE` or `/tmp/auradent-session-records.jsonl`. With `AURADENT_DATABASE_URL` set, it writes to PostgreSQL instead.
 
+For local PostgreSQL setup and inspection:
+
+```bash
+npm run migrate:worker-local
+```
+
+```bash
+npm run readback:worker-local
+```
+
+You can also read back a single session:
+
+```bash
+npm run readback:worker-local -- demo-session
+```
+
 The detailed stage-by-stage checklist lives in [docs/implementation-plan.md](/Users/nataliep/Documents/New%20project/docs/implementation-plan.md).
 
 ## Scripts

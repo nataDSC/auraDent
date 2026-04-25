@@ -1,6 +1,7 @@
 import { appendFile, mkdir } from 'node:fs/promises';
 import path from 'node:path';
 import type { PersistableSessionRecord } from '@auradent/ingestion';
+import { CREATE_AURADENT_SESSION_RECORDS_TABLE_SQL } from './schema';
 
 export type SessionPersistenceAdapter = {
   kind: 'postgres' | 'local-file';
@@ -38,17 +39,7 @@ async function createPostgresPersistenceAdapter(connectionString: string): Promi
   });
 
   await client.connect();
-  await client.query(`
-    create table if not exists auradent_session_records (
-      session_id text primary key,
-      patient_id text not null,
-      closed_at timestamptz not null,
-      insurance_status text not null,
-      record jsonb not null,
-      created_at timestamptz not null default now(),
-      updated_at timestamptz not null default now()
-    );
-  `);
+  await client.query(CREATE_AURADENT_SESSION_RECORDS_TABLE_SQL);
 
   return {
     kind: 'postgres',

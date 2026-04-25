@@ -78,7 +78,7 @@ This scaffold now includes a runnable local demo path:
 - `In Progress` Deepgram live transcription wiring and end-to-end session lifecycle shape.
 - `In Progress` Vercel AI SDK orchestration with mock practice-management tools and heuristic fallback.
 - `In Progress` AWS deployment wiring from queue to bundled worker artifact, pending dependency install and `cdk` deployment.
-- `In Progress` Production PostgreSQL rollout and downstream artifact persistence hardening.
+- `In Progress` Production PostgreSQL rollout, downstream artifact persistence hardening, and async retry/DLQ behavior.
 - `In Progress` Early unit and integration-style coverage for gateway, ingestion, and worker persistence paths.
 
 ### Run Current Stage

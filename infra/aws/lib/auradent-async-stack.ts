@@ -43,7 +43,10 @@ export class AuraDentAsyncStack extends Stack {
       },
     });
 
-    worker.addEventSource(new SqsEventSource(sessionCloseQueue, { batchSize: 5 }));
+    worker.addEventSource(new SqsEventSource(sessionCloseQueue, {
+      batchSize: 5,
+      reportBatchItemFailures: true,
+    }));
 
     sessionCloseQueue.grantConsumeMessages(worker);
 

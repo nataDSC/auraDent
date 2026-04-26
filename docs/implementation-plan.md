@@ -27,7 +27,7 @@ Status legend:
 - `Completed` Add Framer Motion layout and entry animations for transcript and chart cards.
 - `Completed` Connect the UI to the gateway WebSocket.
 - `Completed` Add real microphone capture and browser audio streaming.
-- `In Progress` Add production-quality latency and session state UX, including unique per-run session identifiers and explicit empty/deferred extraction guidance.
+- `In Progress` Add production-quality latency and session state UX, including unique per-run session identifiers, explicit empty/deferred extraction guidance, and client-side websocket reconnect handling.
 
 ### Stage 3: Real-time gateway
 
@@ -81,7 +81,7 @@ Status legend:
 - `In Progress` Install dependencies and run full workspace verification.
 - `In Progress` Add unit tests for schemas, normalization, transcript revision logic, and worker persistence.
 - `In Progress` Add integration-style tests for gateway extraction gating, session-close replay, and async backend boundaries.
-- `In Progress` Add reconnect handling, retry behavior, and DLQ operational coverage.
+- `In Progress` Add reconnect handling, retry behavior, and DLQ operational coverage, including client-side websocket recovery with backoff.
 - `In Progress` Add observability, audit, metrics validation, and operator-friendly inspection surfaces.
 
 ## Guiding principles

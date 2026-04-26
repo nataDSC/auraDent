@@ -17,11 +17,19 @@ export type PersistedSessionRow = {
 
 export type ReadbackSummary = {
   artifactOutputPath: string | null;
+  dedupeDuplicateCount: number;
+  dedupeResolution: string | null;
   sessionId: string;
   patientId: string;
   closedAt: string;
   insuranceStatus: string;
   findingsCount: number;
+  mergedUtteranceProvenance: Array<{
+    duplicateCount: number;
+    mergedSourceUtteranceIds: string[];
+    sourceUtteranceId: string;
+    toothNumber: number;
+  }>;
   traceEventCount: number;
   metricCount: number;
   processingDurationMs: number | null;
@@ -57,16 +65,32 @@ export function summarizePersistedSessionRow(row: PersistedSessionRow): Readback
     typeof row.record.postOpInstruction?.fileName === 'string'
       ? row.record.postOpInstruction.fileName
       : 'unavailable';
+  const mergedUtteranceProvenance = normalizedFindings
+    .map((finding) => ({
+      duplicateCount: finding.provenance?.duplicateCount ?? 0,
+      mergedSourceUtteranceIds: finding.provenance?.mergedSourceUtteranceIds ?? [finding.sourceUtteranceId],
+      sourceUtteranceId: finding.sourceUtteranceId,
+      toothNumber: finding.toothNumber,
+    }))
+    .filter((finding) => finding.duplicateCount > 0);
+  const dedupeDuplicateCount = normalizedFindings.reduce(
+    (sum, finding) => sum + (finding.provenance?.duplicateCount ?? 0),
+    0,
+  );
+  const dedupeResolution = normalizedFindings.find((finding) => finding.provenance?.resolution)?.provenance?.resolution ?? null;
 
   return {
     artifactOutputPath: typeof row.record.postOpInstruction?.storage?.outputPath === 'string'
       ? row.record.postOpInstruction.storage.outputPath
       : null,
+    dedupeDuplicateCount,
+    dedupeResolution,
     sessionId: row.session_id,
     patientId: row.patient_id,
     closedAt: row.closed_at,
     insuranceStatus: row.insurance_status,
     findingsCount: normalizedFindings.length,
+    mergedUtteranceProvenance,
     traceEventCount: processing?.traceEventCount ?? traceArtifacts.length,
     metricCount: processing?.metricCount ?? metricArtifacts.length,
     processingDurationMs: processing?.processingDurationMs ?? null,

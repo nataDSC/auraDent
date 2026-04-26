@@ -88,6 +88,7 @@ This scaffold now includes a runnable local demo path:
 - `Completed` Unique per-run session ids in the UI/gateway flow, so replay and persistence no longer collapse everything into `demo-session`.
 - `Completed` Clearer latency surfacing in the UI, including explicit `TTFT` and `Finalization latency` metrics.
 - `Completed` Findings empty-state guidance that explains when extraction is waiting for an explicit tooth reference.
+- `Completed` Client-side websocket reconnect handling with automatic retry/backoff and clearer recovery messaging in the session deck.
 
 ### Run Current Stage
 
@@ -212,6 +213,12 @@ npm run readback:worker-local -- demo-session --full
 ```
 
 The readback summary now includes the stored post-op artifact path when one is available.
+
+It also now surfaces dedup/provenance details for persisted findings, including:
+
+- how many duplicate findings were collapsed
+- the dedupe resolution policy
+- which utterance ids were merged for each deduplicated tooth finding
 
 The detailed stage-by-stage checklist lives in [docs/implementation-plan.md](/Users/nataliep/Documents/New%20project/docs/implementation-plan.md).
 

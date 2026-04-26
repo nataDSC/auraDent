@@ -82,8 +82,11 @@ test('buildReadbackResponse surfaces audit-friendly summaries', () => {
 
   assert.equal(response.count, 1);
   assert.equal(response.summaries[0]?.artifactOutputPath, '/tmp/auradent/post-op-demo-session.pdf');
+  assert.equal(response.summaries[0]?.dedupeDuplicateCount, 0);
+  assert.equal(response.summaries[0]?.dedupeResolution, 'highest-confidence-then-latest');
   assert.equal(response.summaries[0]?.sessionId, 'demo-session');
   assert.equal(response.summaries[0]?.findingsCount, 1);
+  assert.deepEqual(response.summaries[0]?.mergedUtteranceProvenance, []);
   assert.equal(response.summaries[0]?.runtime, 'local');
   assert.equal(response.summaries[0]?.persistenceMode, 'postgres');
   assert.equal(response.summaries[0]?.postOpFile, 'post-op-demo-session.pdf');
@@ -124,10 +127,77 @@ test('buildReadbackResponse tolerates older persisted records without source art
 
   assert.equal(response.count, 1);
   assert.equal(response.summaries[0]?.artifactOutputPath, null);
+  assert.equal(response.summaries[0]?.dedupeDuplicateCount, 0);
+  assert.equal(response.summaries[0]?.dedupeResolution, null);
   assert.equal(response.summaries[0]?.sessionId, 'legacy-session');
   assert.equal(response.summaries[0]?.traceEventCount, 0);
   assert.equal(response.summaries[0]?.metricCount, 0);
+  assert.deepEqual(response.summaries[0]?.mergedUtteranceProvenance, []);
   assert.equal(response.summaries[0]?.runtime, 'unknown');
   assert.equal(response.summaries[0]?.postOpFile, 'legacy-post-op.pdf');
   assert.equal(response.summaries[0]?.transcriptPreview, 'Legacy persisted transcript');
+});
+
+test('buildReadbackResponse surfaces merged utterance provenance for deduplicated findings', () => {
+  const dedupedRecord = {
+    sessionId: 'dedupe-session',
+    patientId: 'dedupe-patient',
+    closedAt: '2026-04-26T02:00:00.000Z',
+    transcript: {
+      finalText: 'Patient has revised findings on tooth 14.',
+    },
+    normalizedFindings: [
+      {
+        sessionId: 'dedupe-session',
+        patientId: 'dedupe-patient',
+        toothNumber: 14,
+        probingDepthMm: 4,
+        bleedingOnProbing: true,
+        sourceUtteranceId: 'utt-2000',
+        confidence: 0.95,
+        provenance: {
+          dedupeKey: 'tooth-14',
+          duplicateCount: 2,
+          mergedSourceUtteranceIds: ['utt-1000', 'utt-1500', 'utt-2000'],
+          resolution: 'highest-confidence-then-latest',
+        },
+      },
+    ],
+    postOpInstruction: {
+      fileName: 'post-op-dedupe-session.pdf',
+    },
+    insurancePreAuthorization: {
+      status: 'approved',
+    },
+    observability: {
+      sourceArtifacts: {
+        trace: [],
+        metrics: [],
+      },
+    },
+  } as unknown as PersistableSessionRecord;
+
+  const response = buildReadbackResponse(
+    [
+      {
+        session_id: 'dedupe-session',
+        patient_id: 'dedupe-patient',
+        insurance_status: 'approved',
+        closed_at: '2026-04-26T02:00:00.000Z',
+        record: dedupedRecord,
+      },
+    ],
+    false,
+  );
+
+  assert.equal(response.summaries[0]?.dedupeDuplicateCount, 2);
+  assert.equal(response.summaries[0]?.dedupeResolution, 'highest-confidence-then-latest');
+  assert.deepEqual(response.summaries[0]?.mergedUtteranceProvenance, [
+    {
+      duplicateCount: 2,
+      mergedSourceUtteranceIds: ['utt-1000', 'utt-1500', 'utt-2000'],
+      sourceUtteranceId: 'utt-2000',
+      toothNumber: 14,
+    },
+  ]);
 });

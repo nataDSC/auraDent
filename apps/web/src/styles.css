@@ -123,6 +123,10 @@ body {
   background: #57e8aa;
 }
 
+.status-reconnecting .status-dot {
+  background: #7dd8ff;
+}
+
 .status-disconnected .status-dot {
   background: #ff7e7e;
 }

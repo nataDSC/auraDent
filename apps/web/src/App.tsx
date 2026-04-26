@@ -16,7 +16,7 @@ type FindingCard = {
 
 type RecordingState = 'idle' | 'requesting' | 'recording' | 'demo';
 
-type SocketStatus = 'connecting' | 'connected' | 'disconnected';
+type SocketStatus = 'connecting' | 'connected' | 'disconnected' | 'reconnecting';
 
 type SessionSnapshot = {
   label: string;
@@ -32,6 +32,7 @@ export default function App() {
   const [agentMode, setAgentMode] = useState<'unknown' | 'ai-sdk' | 'heuristic'>('unknown');
   const [activeSessionId, setActiveSessionId] = useState<string | null>(null);
   const [postgresOnStop, setPostgresOnStop] = useState(false);
+  const [reconnectAttempt, setReconnectAttempt] = useState(0);
   const [transcript, setTranscript] = useState<TranscriptLine[]>([]);
   const [traceEvents, setTraceEvents] = useState<Array<{ detail: string; step: string; confidence?: number }>>([]);
   const [findings, setFindings] = useState<FindingCard[]>([]);
@@ -40,6 +41,10 @@ export default function App() {
   const [micError, setMicError] = useState<string | null>(null);
   const canvasRef = useRef<HTMLCanvasElement | null>(null);
   const socketRef = useRef<WebSocket | null>(null);
+  const reconnectTimerRef = useRef<number | null>(null);
+  const reconnectAttemptRef = useRef(0);
+  const shouldReconnectRef = useRef(true);
+  const recordingStateRef = useRef<RecordingState>('idle');
   const mediaStreamRef = useRef<MediaStream | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const processorRef = useRef<ScriptProcessorNode | null>(null);
@@ -64,84 +69,114 @@ export default function App() {
   });
 
   useEffect(() => {
-    const socket = new WebSocket(gatewayUrl);
-    socket.binaryType = 'arraybuffer';
-    socketRef.current = socket;
+    shouldReconnectRef.current = true;
 
-    socket.addEventListener('open', () => {
-      if (socketRef.current === socket) {
-        setSocketStatus('connected');
-      }
-    });
+    const connectSocket = () => {
+      setSocketStatus(reconnectAttemptRef.current > 0 ? 'reconnecting' : 'connecting');
+      const socket = new WebSocket(gatewayUrl);
+      socket.binaryType = 'arraybuffer';
+      socketRef.current = socket;
 
-    socket.addEventListener('close', () => {
-      if (socketRef.current === socket) {
-        setSocketStatus('disconnected');
-        socketRef.current = null;
-      }
-    });
+      socket.addEventListener('open', () => {
+        if (socketRef.current === socket) {
+          reconnectAttemptRef.current = 0;
+          setReconnectAttempt(0);
+          setSocketStatus('connected');
+        }
+      });
 
-    socket.addEventListener('message', (message) => {
-      const event = JSON.parse(message.data) as RealtimeEvent;
-
-      switch (event.type) {
-        case 'session.started':
-          setActiveSessionId(event.sessionId);
-          break;
-        case 'audio.level':
-          setAudioLevel(event.level);
-          break;
-        case 'transcript.partial':
-          setTranscript((current) => upsertTranscript(current, event.utteranceId, event.text, false));
-          break;
-        case 'transcript.final':
-          setTranscript((current) =>
-            upsertTranscript(current, event.utteranceId, event.redactedText ?? event.text, true),
-          );
-          break;
-        case 'trace.event':
-          if (event.step === 'agent.mode') {
-            setAgentMode(resolveAgentMode(event.detail));
+      socket.addEventListener('close', () => {
+        if (socketRef.current === socket) {
+          socketRef.current = null;
+          if (recordingStateRef.current !== 'idle') {
+            stopStreaming(false);
+            setMicError('Gateway connection dropped. Reconnect completed automatically when available, then start a new session.');
           }
-          setTraceEvents((current) =>
-            appendTraceEvent(current, {
-              detail: event.detail,
-              step: event.step,
-              confidence: event.confidence,
-            }),
-          );
-          break;
-        case 'chart.finding.staged':
-        case 'chart.finding.committed':
-          setFindings((current) => {
-            const payload = event.payload as { label?: string; detail?: string };
-            const card = {
-              id: event.findingId,
-              label: payload.label ?? 'Finding',
-              detail: payload.detail ?? 'Awaiting detail',
-            };
-            return [...current.filter((item) => item.id !== card.id), card];
-          });
-          break;
-        case 'metric':
-          setMetrics((current) => ({
-            ...current,
-            [event.name]: `${event.value}${event.unit}`,
-          }));
-          break;
-        default:
-          break;
-      }
-    });
+
+          if (!shouldReconnectRef.current) {
+            setSocketStatus('disconnected');
+            return;
+          }
+
+          const nextAttempt = reconnectAttemptRef.current + 1;
+          reconnectAttemptRef.current = nextAttempt;
+          setReconnectAttempt(nextAttempt);
+          setSocketStatus('reconnecting');
+          reconnectTimerRef.current = window.setTimeout(connectSocket, getReconnectDelayMs(nextAttempt));
+        }
+      });
+
+      socket.addEventListener('message', (message) => {
+        const event = JSON.parse(message.data) as RealtimeEvent;
+
+        switch (event.type) {
+          case 'session.started':
+            setActiveSessionId(event.sessionId);
+            break;
+          case 'audio.level':
+            setAudioLevel(event.level);
+            break;
+          case 'transcript.partial':
+            setTranscript((current) => upsertTranscript(current, event.utteranceId, event.text, false));
+            break;
+          case 'transcript.final':
+            setTranscript((current) =>
+              upsertTranscript(current, event.utteranceId, event.redactedText ?? event.text, true),
+            );
+            break;
+          case 'trace.event':
+            if (event.step === 'agent.mode') {
+              setAgentMode(resolveAgentMode(event.detail));
+            }
+            setTraceEvents((current) =>
+              appendTraceEvent(current, {
+                detail: event.detail,
+                step: event.step,
+                confidence: event.confidence,
+              }),
+            );
+            break;
+          case 'chart.finding.staged':
+          case 'chart.finding.committed':
+            setFindings((current) => {
+              const payload = event.payload as { label?: string; detail?: string };
+              const card = {
+                id: event.findingId,
+                label: payload.label ?? 'Finding',
+                detail: payload.detail ?? 'Awaiting detail',
+              };
+              return [...current.filter((item) => item.id !== card.id), card];
+            });
+            break;
+          case 'metric':
+            setMetrics((current) => ({
+              ...current,
+              [event.name]: `${event.value}${event.unit}`,
+            }));
+            break;
+          default:
+            break;
+        }
+      });
+    };
+
+    connectSocket();
 
     return () => {
-      stopStreaming();
-      if (socketRef.current === socket) {
-        socketRef.current = null;
+      shouldReconnectRef.current = false;
+      stopStreaming(false);
+      if (reconnectTimerRef.current) {
+        window.clearTimeout(reconnectTimerRef.current);
+        reconnectTimerRef.current = null;
       }
-      socket.close();
+      socketRef.current?.close();
+      socketRef.current = null;
     };
   }, []);
+
+  useEffect(() => {
+    recordingStateRef.current = recordingState;
+  }, [recordingState]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -264,7 +299,7 @@ export default function App() {
     });
   }
 
-  function stopStreaming() {
+  function stopStreaming(sendStopMessage = true) {
     processorRef.current?.disconnect();
     sourceNodeRef.current?.disconnect();
     silentGainRef.current?.disconnect();
@@ -277,7 +312,7 @@ export default function App() {
     audioContextRef.current = null;
     mediaStreamRef.current = null;
 
-    if (recordingState !== 'idle') {
+    if (sendStopMessage && recordingStateRef.current !== 'idle') {
       sendClientMessage({ type: 'session.stop' });
     }
     setRecordingState('idle');
@@ -323,7 +358,7 @@ export default function App() {
             </button>
             <button
               className="action-button"
-              onClick={stopStreaming}
+              onClick={() => stopStreaming()}
               disabled={recordingState === 'idle'}
             >
               Stop
@@ -382,7 +417,7 @@ export default function App() {
             <article className="session-brief tone-muted">
               <span className="session-brief-label">Connection</span>
               <strong>{socketStatus}</strong>
-              <p>{socketStatus === 'connected' ? 'Gateway websocket is ready for live or demo sessions.' : 'Waiting for a healthy gateway link.'}</p>
+              <p>{buildConnectionDetail(socketStatus, reconnectAttempt)}</p>
             </article>
             <article className="session-brief tone-muted">
               <span className="session-brief-label">Transcript state</span>
@@ -610,10 +645,12 @@ function buildSessionSnapshot(args: {
 
   if (args.socketStatus !== 'connected') {
     return {
-      label: 'Gateway handshake',
+      label: args.socketStatus === 'reconnecting' ? 'Gateway recovery' : 'Gateway handshake',
       tone: 'warn',
       detail:
-        args.socketStatus === 'connecting'
+        args.socketStatus === 'reconnecting'
+          ? 'Reconnecting to the realtime gateway after a dropped connection.'
+          : args.socketStatus === 'connecting'
           ? 'Connecting to the realtime gateway before starting a session.'
           : 'Gateway disconnected. Reconnect before resuming the chairside flow.',
     };
@@ -727,4 +764,25 @@ function formatMetricName(name: string) {
   }
 
   return name.replace(/_/g, ' ');
+}
+
+function buildConnectionDetail(socketStatus: SocketStatus, reconnectAttempt: number) {
+  if (socketStatus === 'connected') {
+    return 'Gateway websocket is ready for live or demo sessions.';
+  }
+
+  if (socketStatus === 'reconnecting') {
+    return `Attempting to recover the gateway link${reconnectAttempt > 0 ? ` (retry ${reconnectAttempt})` : ''}.`;
+  }
+
+  if (socketStatus === 'connecting') {
+    return 'Opening the first gateway websocket handshake for this browser session.';
+  }
+
+  return 'Gateway is offline. Keep the page open and the client will retry automatically.';
+}
+
+function getReconnectDelayMs(attempt: number) {
+  const baseDelay = Math.min(1000 * 2 ** Math.max(0, attempt - 1), 8000);
+  return baseDelay;
 }

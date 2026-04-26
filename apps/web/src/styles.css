@@ -1,7 +1,7 @@
 :root {
   color-scheme: dark;
   --font-body: "SF Pro Text", "Avenir Next", "IBM Plex Sans", "Segoe UI", sans-serif;
-  --font-display: "SF Pro Display", "Avenir Next", "IBM Plex Sans", "Segoe UI", sans-serif;
+  --font-display: "Iowan Old Style", "Palatino Linotype", "Book Antiqua", Georgia, serif;
   --font-mono: "SF Mono", "IBM Plex Mono", "Roboto Mono", monospace;
   font-family: var(--font-body);
   background:
@@ -82,48 +82,49 @@ body {
 
 .eyebrow {
   margin: 0 0 6px;
-  letter-spacing: 0.18em;
+  letter-spacing: 0.16em;
   text-transform: uppercase;
-  font-size: 0.72rem;
-  color: #7eb5ce;
+  font-size: 0.69rem;
+  color: #86b5c8;
   font-family: var(--font-mono);
+  opacity: 0.88;
 }
 
 .status-pill {
-  border: 1px solid rgba(166, 226, 255, 0.18);
+  border: 1px solid rgba(166, 226, 255, 0.12);
   border-radius: 999px;
   padding: 8px 12px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   text-transform: capitalize;
-  background: rgba(6, 18, 24, 0.55);
+  background: rgba(8, 20, 27, 0.5);
   font-family: var(--font-body);
   font-size: 0.92rem;
   font-weight: 520;
 }
 
 .mode-pill {
-  border: 1px solid rgba(166, 226, 255, 0.16);
+  border: 1px solid rgba(166, 226, 255, 0.11);
   border-radius: 999px;
   padding: 8px 12px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: rgba(8, 24, 32, 0.88);
+  background: rgba(8, 24, 32, 0.76);
   text-transform: lowercase;
 }
 
 .mode-pill span {
-  color: #8ebed2;
-  font-size: 0.78rem;
+  color: #95c0d0;
+  font-size: 0.74rem;
   font-family: var(--font-mono);
 }
 
 .mode-pill strong {
   margin: 0;
   font-family: var(--font-body);
-  font-weight: 560;
+  font-weight: 500;
 }
 
 .mode-ai-sdk {
@@ -165,10 +166,10 @@ body {
 }
 
 .panel {
-  border: 1px solid rgba(148, 206, 235, 0.14);
+  border: 1px solid rgba(148, 206, 235, 0.1);
   border-radius: 22px;
-  background: rgba(7, 20, 27, 0.78);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 24px 80px rgba(0, 0, 0, 0.28);
+  background: rgba(7, 20, 27, 0.72);
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.03), 0 22px 70px rgba(0, 0, 0, 0.22);
   backdrop-filter: blur(18px);
 }
 
@@ -221,23 +222,23 @@ body {
 .session-brief,
 .empty-state-card {
   border-radius: 16px;
-  border: 1px solid rgba(136, 201, 226, 0.12);
-  background: rgba(16, 39, 51, 0.74);
+  border: 1px solid rgba(136, 201, 226, 0.09);
+  background: rgba(16, 39, 51, 0.62);
   padding: 13px 14px;
 }
 
 .session-brief {
   background:
-    linear-gradient(180deg, rgba(146, 223, 255, 0.05), rgba(10, 25, 34, 0.84)),
-    rgba(16, 39, 51, 0.74);
+    linear-gradient(180deg, rgba(146, 223, 255, 0.035), rgba(10, 25, 34, 0.78)),
+    rgba(16, 39, 51, 0.62);
 }
 
 .session-brief-label {
   display: block;
   margin-bottom: 7px;
-  color: #76acc3;
+  color: #84b3c4;
   font-size: 0.71rem;
-  letter-spacing: 0.12em;
+  letter-spacing: 0.1em;
   text-transform: uppercase;
   font-family: var(--font-mono);
 }
@@ -247,17 +248,18 @@ body {
   display: block;
   margin-bottom: 6px;
   font-family: var(--font-display);
-  font-size: 1.02rem;
-  font-weight: 540;
-  letter-spacing: -0.02em;
+  font-size: 1rem;
+  font-weight: 500;
+  letter-spacing: -0.015em;
 }
 
 .session-brief p,
 .empty-state-card p {
   margin: 0;
-  color: #9cc7da;
-  line-height: 1.42;
+  color: #a8c8d6;
+  line-height: 1.5;
   font-size: 0.95rem;
+  font-weight: 400;
 }
 
 .tone-live {
@@ -278,24 +280,24 @@ body {
   gap: 3px;
   padding: 8px 10px;
   border-radius: 14px;
-  background: rgba(15, 35, 47, 0.85);
-  border: 1px solid rgba(126, 181, 206, 0.16);
+  background: rgba(15, 35, 47, 0.72);
+  border: 1px solid rgba(126, 181, 206, 0.12);
   min-width: 84px;
 }
 
 .metric-chip span {
   font-size: 0.7rem;
-  color: #8ebed2;
+  color: #92bfd1;
   font-family: var(--font-mono);
   letter-spacing: 0.06em;
   text-transform: uppercase;
 }
 
 .metric-chip strong {
-  font-family: var(--font-display);
-  font-size: 1.08rem;
-  font-weight: 540;
-  letter-spacing: -0.03em;
+  font-family: var(--font-body);
+  font-size: 1.02rem;
+  font-weight: 520;
+  letter-spacing: -0.02em;
 }
 
 .transcript-list,
@@ -309,8 +311,8 @@ body {
 .finding-card,
 .trace-item {
   border-radius: 16px;
-  border: 1px solid rgba(136, 201, 226, 0.12);
-  background: rgba(16, 39, 51, 0.74);
+  border: 1px solid rgba(136, 201, 226, 0.09);
+  background: rgba(16, 39, 51, 0.62);
 }
 
 .transcript-line {
@@ -322,10 +324,11 @@ body {
   margin: 0;
   line-height: 1.46;
   font-size: 0.96rem;
+  color: #d9edf6;
 }
 
 .transcript-line.partial {
-  color: rgba(231, 244, 251, 0.56);
+  color: rgba(231, 244, 251, 0.52);
 }
 
 .transcript-line.final {
@@ -335,10 +338,11 @@ body {
 .utterance-label {
   display: inline-block;
   margin-bottom: 6px;
-  color: #76acc3;
+  color: #85b5c7;
   font-size: 0.7rem;
   letter-spacing: 0.12em;
   font-family: var(--font-mono);
+  opacity: 0.92;
 }
 
 .chart-grid {
@@ -357,13 +361,13 @@ body {
   flex-direction: column;
   justify-content: space-between;
   background:
-    radial-gradient(circle at top right, rgba(135, 224, 255, 0.13), transparent 30%),
-    rgba(12, 31, 40, 0.92);
+    radial-gradient(circle at top right, rgba(135, 224, 255, 0.09), transparent 28%),
+    rgba(12, 31, 40, 0.8);
 }
 
 .finding-card p {
   margin: 0;
-  color: #90bdd0;
+  color: #96becd;
   text-transform: uppercase;
   letter-spacing: 0.08em;
   font-size: 0.68rem;
@@ -372,9 +376,10 @@ body {
 
 .finding-card strong {
   font-family: var(--font-display);
-  font-size: 1.18rem;
-  font-weight: 540;
-  letter-spacing: -0.03em;
+  font-size: 1.08rem;
+  font-weight: 500;
+  letter-spacing: -0.02em;
+  line-height: 1.18;
 }
 
 .trace-list {
@@ -394,9 +399,9 @@ body {
 .trace-step-row {
   margin-bottom: 8px;
   color: #cfeaf8;
-  font-family: var(--font-display);
-  font-size: 0.95rem;
-  font-weight: 540;
+  font-family: var(--font-body);
+  font-size: 0.9rem;
+  font-weight: 520;
 }
 
 .trace-step-row span {
@@ -423,8 +428,8 @@ body {
   gap: 8px;
   padding: 9px 12px;
   border-radius: 13px;
-  border: 1px solid rgba(166, 226, 255, 0.16);
-  background: rgba(8, 24, 32, 0.88);
+  border: 1px solid rgba(166, 226, 255, 0.12);
+  background: rgba(8, 24, 32, 0.72);
   color: #dff3fc;
   font-family: var(--font-body);
 }
@@ -441,18 +446,18 @@ body {
 
 .toggle-chip-enabled {
   border-color: rgba(87, 232, 170, 0.26);
-  background: rgba(10, 36, 33, 0.92);
+  background: rgba(10, 36, 33, 0.78);
 }
 
 .action-button {
-  border: 1px solid rgba(166, 226, 255, 0.16);
-  background: rgba(8, 24, 32, 0.88);
+  border: 1px solid rgba(166, 226, 255, 0.12);
+  background: rgba(8, 24, 32, 0.72);
   color: #dff3fc;
   border-radius: 13px;
   padding: 9px 12px;
   font-family: var(--font-body);
   font-size: 0.95rem;
-  font-weight: 520;
+  font-weight: 500;
   cursor: pointer;
   transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
 }

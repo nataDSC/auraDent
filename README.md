@@ -82,6 +82,7 @@ This scaffold now includes a runnable local demo path:
 - `In Progress` AWS deployment wiring from queue to bundled worker artifact, pending dependency install and `cdk` deployment.
 - `In Progress` Production PostgreSQL rollout, downstream artifact persistence hardening, and async retry/DLQ behavior.
 - `Completed` Worker now persists generated post-op PDF artifacts to the local filesystem and records their storage paths for inspection.
+- `Completed` Shared redaction middleware now has direct regression coverage for possessive patient-name phrasing, contextual loose phone numbers, and mixed-identifier utterances.
 - `In Progress` Early unit and integration-style coverage for gateway, ingestion, and worker persistence paths.
 - `In Progress` Worker-side audit metadata for processing duration, receive counts, and payload/record integrity hashes.
 - `In Progress` Frontend session-state polish and operator-friendly persisted-record readback summaries.
@@ -148,6 +149,7 @@ npm run test
 
 The current test suite is still small and focused, covering:
 
+- shared PII redaction behavior and regression cases
 - gateway extraction gating and session-close payload helpers
 - ingestion normalization and persistable record assembly
 - worker local persistence behavior

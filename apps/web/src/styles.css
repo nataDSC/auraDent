@@ -52,8 +52,9 @@ body {
 }
 
 .topbar {
-  margin-bottom: 16px;
+  margin-bottom: 14px;
   gap: 16px;
+  padding-bottom: 4px;
 }
 
 .topbar h1,
@@ -93,21 +94,21 @@ body {
 .status-pill {
   border: 1px solid rgba(166, 226, 255, 0.12);
   border-radius: 999px;
-  padding: 8px 12px;
+  padding: 7px 11px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   text-transform: capitalize;
   background: rgba(8, 20, 27, 0.5);
   font-family: var(--font-body);
-  font-size: 0.92rem;
+  font-size: 0.86rem;
   font-weight: 520;
 }
 
 .mode-pill {
   border: 1px solid rgba(166, 226, 255, 0.11);
   border-radius: 999px;
-  padding: 8px 12px;
+  padding: 7px 11px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -117,7 +118,7 @@ body {
 
 .mode-pill span {
   color: #95c0d0;
-  font-size: 0.74rem;
+  font-size: 0.7rem;
   font-family: var(--font-mono);
 }
 
@@ -208,15 +209,15 @@ body {
 }
 
 .metric-strip {
-  gap: 8px;
+  gap: 7px;
   flex-wrap: wrap;
 }
 
 .session-command-deck {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  gap: 10px;
-  margin: 14px 0 16px;
+  grid-template-columns: repeat(auto-fit, minmax(142px, 1fr));
+  gap: 8px;
+  margin: 12px 0 14px;
 }
 
 .session-brief,
@@ -231,14 +232,15 @@ body {
   background:
     linear-gradient(180deg, rgba(146, 223, 255, 0.035), rgba(10, 25, 34, 0.78)),
     rgba(16, 39, 51, 0.62);
+  padding: 10px 11px;
 }
 
 .session-brief-label {
   display: block;
-  margin-bottom: 7px;
+  margin-bottom: 5px;
   color: #84b3c4;
-  font-size: 0.71rem;
-  letter-spacing: 0.1em;
+  font-size: 0.62rem;
+  letter-spacing: 0.08em;
   text-transform: uppercase;
   font-family: var(--font-mono);
 }
@@ -253,6 +255,12 @@ body {
   letter-spacing: -0.015em;
 }
 
+.session-brief strong {
+  margin-bottom: 4px;
+  font-size: 0.84rem;
+  line-height: 1.08;
+}
+
 .session-brief p,
 .empty-state-card p {
   margin: 0;
@@ -260,6 +268,11 @@ body {
   line-height: 1.5;
   font-size: 0.95rem;
   font-weight: 400;
+}
+
+.session-brief p {
+  font-size: 0.8rem;
+  line-height: 1.34;
 }
 
 .tone-live {
@@ -385,10 +398,13 @@ body {
 .trace-list {
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   margin-top: 14px;
+  gap: 8px;
 }
 
 .trace-item {
-  padding: 13px 14px;
+  padding: 11px 12px;
+  background: rgba(15, 34, 45, 0.5);
+  border-color: rgba(136, 201, 226, 0.07);
 }
 
 .transcript-list > .empty-state-card,
@@ -397,17 +413,23 @@ body {
 }
 
 .trace-step-row {
-  margin-bottom: 8px;
-  color: #cfeaf8;
+  margin-bottom: 6px;
+  color: #c6e0ec;
   font-family: var(--font-body);
-  font-size: 0.9rem;
-  font-weight: 520;
+  font-size: 0.84rem;
+  font-weight: 500;
 }
 
 .trace-step-row span {
-  color: #89cde9;
+  color: #84bdd4;
   font-family: var(--font-mono);
-  font-size: 0.74rem;
+  font-size: 0.68rem;
+}
+
+.trace-item p {
+  color: #a8c7d5;
+  font-size: 0.88rem;
+  line-height: 1.4;
 }
 
 .topbar-actions {
@@ -426,7 +448,7 @@ body {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  padding: 9px 12px;
+  padding: 8px 11px;
   border-radius: 13px;
   border: 1px solid rgba(166, 226, 255, 0.12);
   background: rgba(8, 24, 32, 0.72);
@@ -440,7 +462,7 @@ body {
 }
 
 .toggle-chip span {
-  font-size: 0.82rem;
+  font-size: 0.76rem;
   font-weight: 510;
 }
 
@@ -454,9 +476,9 @@ body {
   background: rgba(8, 24, 32, 0.72);
   color: #dff3fc;
   border-radius: 13px;
-  padding: 9px 12px;
+  padding: 8px 11px;
   font-family: var(--font-body);
-  font-size: 0.95rem;
+  font-size: 0.89rem;
   font-weight: 500;
   cursor: pointer;
   transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;

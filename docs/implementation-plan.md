@@ -47,6 +47,7 @@ Status legend:
 - `Completed` Add a starter extraction function that turns transcript text into typed perio findings.
 - `In Progress` Use shared schemas to validate extraction output.
 - `Completed` Add PII redaction middleware between transcript and agent extraction.
+- `Completed` Add direct regression coverage for redaction middleware behavior, including patient-name and contextual phone cases.
 - `In Progress` Replace heuristic extraction with Vercel AI SDK orchestration.
 - `In Progress` Add typed practice-management tool definitions and tool execution flow.
 - `Completed` Add trace emission for redaction outcomes.
@@ -79,7 +80,7 @@ Status legend:
 ### Stage 7: Verification and hardening
 
 - `In Progress` Install dependencies and run full workspace verification.
-- `In Progress` Add unit tests for schemas, normalization, transcript revision logic, and worker persistence.
+- `In Progress` Add unit tests for schemas, normalization, transcript revision logic, redaction middleware behavior, and worker persistence.
 - `In Progress` Add integration-style tests for gateway extraction gating, session-close replay, and async backend boundaries.
 - `In Progress` Add reconnect handling, retry behavior, and DLQ operational coverage, including client-side websocket recovery with backoff and gateway-side Deepgram reconnect retries.
 - `In Progress` Add observability, audit, metrics validation, and operator-friendly inspection surfaces.

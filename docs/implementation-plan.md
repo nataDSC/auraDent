@@ -70,10 +70,12 @@ Status legend:
 - `In Progress` Define the end-to-end session-close processing shape across gateway, queue, worker, and storage.
 - `Completed` Define and emit the session-close payload contract from the gateway into a local publisher stub.
 - `Completed` Replace the inline CDK Lambda placeholder with a bundled `apps/worker` artifact in CDK.
+- `Completed` Bootstrap and deploy the AWS async stack in `us-east-1`, including queue, DLQ, Lambda worker, and event source mapping.
 - `Completed` Add post-op PDF generation stub in the worker flow.
 - `Completed` Add mock insurance pre-authorization flow stub in the worker.
 - `Completed` Add persistence-ready enriched session record assembly in the worker.
 - `Completed` Add worker persistence adapter with PostgreSQL and local-file fallback modes.
+- `Completed` Validate the hosted enqueue-to-SQS-to-Lambda path end to end, including queue delivery, Lambda execution, and CloudWatch worker logs.
 - `In Progress` Harden production PostgreSQL rollout, queue retry semantics, and persisted audit metadata.
 - `Completed` Persist generated post-op instruction artifacts to local storage and capture their storage metadata in persisted records.
 
@@ -84,6 +86,7 @@ Status legend:
 - `In Progress` Add integration-style tests for gateway extraction gating, session-close replay, and async backend boundaries.
 - `In Progress` Add reconnect handling, retry behavior, and DLQ operational coverage, including client-side websocket recovery with backoff and gateway-side Deepgram reconnect retries.
 - `In Progress` Add observability, audit, metrics validation, and operator-friendly inspection surfaces.
+- `Completed` Validate hosted async delivery signals, including successful SQS send/receive/delete counts, empty DLQ, and Lambda processing logs from the public demo deployment.
 
 ## Guiding principles
 
@@ -226,6 +229,10 @@ Status: `In Progress`
 - simulate insurance pre-auth,
 - persist final enriched session record.
 
+Current note:
+- hosted enqueue and Lambda processing are validated end to end,
+- durable cloud persistence beyond Lambda local-file fallback is still pending.
+
 ### Milestone 5: Hardening
 
 Status: `In Progress`
@@ -234,6 +241,10 @@ Status: `In Progress`
 - add DLQ and retry handling,
 - improve trace fidelity,
 - validate observability and audit coverage.
+
+Current note:
+- hosted demo delivery through Hugging Face -> SQS -> Lambda is now validated,
+- least-privilege credentials, alarms, and durable storage remain open hardening tasks.
 
 ## Suggested delivery sequence
 

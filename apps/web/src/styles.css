@@ -1,6 +1,9 @@
 :root {
   color-scheme: dark;
-  font-family: "SF Mono", "IBM Plex Mono", "Roboto Mono", monospace;
+  --font-body: "SF Pro Text", "Avenir Next", "IBM Plex Sans", "Segoe UI", sans-serif;
+  --font-display: "SF Pro Display", "Avenir Next", "IBM Plex Sans", "Segoe UI", sans-serif;
+  --font-mono: "SF Mono", "IBM Plex Mono", "Roboto Mono", monospace;
+  font-family: var(--font-body);
   background:
     radial-gradient(circle at top left, rgba(29, 109, 142, 0.34), transparent 36%),
     radial-gradient(circle at bottom right, rgba(180, 227, 255, 0.12), transparent 28%),
@@ -49,8 +52,8 @@ body {
 }
 
 .topbar {
-  margin-bottom: 20px;
-  gap: 18px;
+  margin-bottom: 16px;
+  gap: 16px;
 }
 
 .topbar h1,
@@ -60,29 +63,50 @@ body {
   margin: 0;
 }
 
+.topbar h1 {
+  font-family: var(--font-display);
+  font-size: clamp(2.15rem, 4.6vw, 3.65rem);
+  line-height: 0.96;
+  letter-spacing: -0.05em;
+  font-weight: 580;
+  max-width: 11ch;
+}
+
+.panel-header h2 {
+  font-family: var(--font-display);
+  font-size: 1.65rem;
+  line-height: 1.02;
+  letter-spacing: -0.04em;
+  font-weight: 560;
+}
+
 .eyebrow {
   margin: 0 0 6px;
   letter-spacing: 0.18em;
   text-transform: uppercase;
   font-size: 0.72rem;
   color: #7eb5ce;
+  font-family: var(--font-mono);
 }
 
 .status-pill {
   border: 1px solid rgba(166, 226, 255, 0.18);
   border-radius: 999px;
-  padding: 10px 14px;
+  padding: 8px 12px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
   text-transform: capitalize;
   background: rgba(6, 18, 24, 0.55);
+  font-family: var(--font-body);
+  font-size: 0.92rem;
+  font-weight: 520;
 }
 
 .mode-pill {
   border: 1px solid rgba(166, 226, 255, 0.16);
   border-radius: 999px;
-  padding: 10px 14px;
+  padding: 8px 12px;
   display: inline-flex;
   align-items: center;
   gap: 8px;
@@ -93,10 +117,13 @@ body {
 .mode-pill span {
   color: #8ebed2;
   font-size: 0.78rem;
+  font-family: var(--font-mono);
 }
 
 .mode-pill strong {
   margin: 0;
+  font-family: var(--font-body);
+  font-weight: 560;
 }
 
 .mode-ai-sdk {
@@ -132,14 +159,14 @@ body {
 }
 
 .layout-grid {
-  gap: 20px;
+  gap: 16px;
   align-items: stretch;
   flex-wrap: wrap;
 }
 
 .panel {
   border: 1px solid rgba(148, 206, 235, 0.14);
-  border-radius: 24px;
+  border-radius: 22px;
   background: rgba(7, 20, 27, 0.78);
   box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.04), 0 24px 80px rgba(0, 0, 0, 0.28);
   backdrop-filter: blur(18px);
@@ -147,26 +174,26 @@ body {
 
 .hero-panel {
   flex: 1 1 620px;
-  min-height: 640px;
-  padding: 20px;
+  min-height: 580px;
+  padding: 16px;
 }
 
 .chart-panel {
   flex: 0 1 420px;
-  min-height: 640px;
-  padding: 20px;
+  min-height: 580px;
+  padding: 16px;
 }
 
 .trace-panel {
   flex: 1 1 100%;
-  padding: 20px;
+  padding: 16px;
 }
 
 .waveform {
   width: 100%;
-  height: 160px;
+  height: 140px;
   display: block;
-  margin: 18px 0 22px;
+  margin: 14px 0 18px;
   border-radius: 18px;
   background:
     linear-gradient(180deg, rgba(146, 223, 255, 0.06), rgba(17, 39, 53, 0.3)),
@@ -180,23 +207,23 @@ body {
 }
 
 .metric-strip {
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .session-command-deck {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
-  gap: 12px;
-  margin: 18px 0 20px;
+  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+  gap: 10px;
+  margin: 14px 0 16px;
 }
 
 .session-brief,
 .empty-state-card {
-  border-radius: 18px;
+  border-radius: 16px;
   border: 1px solid rgba(136, 201, 226, 0.12);
   background: rgba(16, 39, 51, 0.74);
-  padding: 16px;
+  padding: 13px 14px;
 }
 
 .session-brief {
@@ -207,24 +234,30 @@ body {
 
 .session-brief-label {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 7px;
   color: #76acc3;
-  font-size: 0.76rem;
+  font-size: 0.71rem;
   letter-spacing: 0.12em;
   text-transform: uppercase;
+  font-family: var(--font-mono);
 }
 
 .session-brief strong,
 .empty-state-card strong {
   display: block;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
+  font-family: var(--font-display);
+  font-size: 1.02rem;
+  font-weight: 540;
+  letter-spacing: -0.02em;
 }
 
 .session-brief p,
 .empty-state-card p {
   margin: 0;
   color: #9cc7da;
-  line-height: 1.5;
+  line-height: 1.42;
+  font-size: 0.95rem;
 }
 
 .tone-live {
@@ -242,42 +275,53 @@ body {
 .metric-chip {
   display: inline-flex;
   flex-direction: column;
-  gap: 4px;
-  padding: 10px 12px;
-  border-radius: 16px;
+  gap: 3px;
+  padding: 8px 10px;
+  border-radius: 14px;
   background: rgba(15, 35, 47, 0.85);
   border: 1px solid rgba(126, 181, 206, 0.16);
-  min-width: 92px;
+  min-width: 84px;
 }
 
 .metric-chip span {
-  font-size: 0.76rem;
+  font-size: 0.7rem;
   color: #8ebed2;
+  font-family: var(--font-mono);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.metric-chip strong {
+  font-family: var(--font-display);
+  font-size: 1.08rem;
+  font-weight: 540;
+  letter-spacing: -0.03em;
 }
 
 .transcript-list,
 .trace-list,
 .chart-grid {
   display: grid;
-  gap: 12px;
+  gap: 10px;
 }
 
 .transcript-line,
 .finding-card,
 .trace-item {
-  border-radius: 18px;
+  border-radius: 16px;
   border: 1px solid rgba(136, 201, 226, 0.12);
   background: rgba(16, 39, 51, 0.74);
 }
 
 .transcript-line {
-  padding: 14px 16px;
+  padding: 12px 14px;
 }
 
 .transcript-line p,
 .trace-item p {
   margin: 0;
-  line-height: 1.5;
+  line-height: 1.46;
+  font-size: 0.96rem;
 }
 
 .transcript-line.partial {
@@ -290,24 +334,25 @@ body {
 
 .utterance-label {
   display: inline-block;
-  margin-bottom: 8px;
+  margin-bottom: 6px;
   color: #76acc3;
-  font-size: 0.76rem;
+  font-size: 0.7rem;
   letter-spacing: 0.12em;
+  font-family: var(--font-mono);
 }
 
 .chart-grid {
-  grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
-  margin-top: 18px;
+  grid-template-columns: repeat(auto-fit, minmax(148px, 1fr));
+  margin-top: 14px;
 }
 
 .chart-grid > .empty-state-card {
-  min-height: 130px;
+  min-height: 108px;
 }
 
 .finding-card {
-  padding: 18px;
-  min-height: 130px;
+  padding: 14px;
+  min-height: 110px;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
@@ -321,16 +366,24 @@ body {
   color: #90bdd0;
   text-transform: uppercase;
   letter-spacing: 0.08em;
-  font-size: 0.74rem;
+  font-size: 0.68rem;
+  font-family: var(--font-mono);
+}
+
+.finding-card strong {
+  font-family: var(--font-display);
+  font-size: 1.18rem;
+  font-weight: 540;
+  letter-spacing: -0.03em;
 }
 
 .trace-list {
-  grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
-  margin-top: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  margin-top: 14px;
 }
 
 .trace-item {
-  padding: 16px;
+  padding: 13px 14px;
 }
 
 .transcript-list > .empty-state-card,
@@ -339,35 +392,41 @@ body {
 }
 
 .trace-step-row {
-  margin-bottom: 10px;
+  margin-bottom: 8px;
   color: #cfeaf8;
+  font-family: var(--font-display);
+  font-size: 0.95rem;
+  font-weight: 540;
 }
 
 .trace-step-row span {
   color: #89cde9;
+  font-family: var(--font-mono);
+  font-size: 0.74rem;
 }
 
 .topbar-actions {
   align-items: center;
-  gap: 12px;
+  gap: 10px;
   flex-wrap: wrap;
   justify-content: flex-end;
 }
 
 .control-row {
-  gap: 10px;
+  gap: 8px;
   flex-wrap: wrap;
 }
 
 .toggle-chip {
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  padding: 11px 14px;
-  border-radius: 14px;
+  gap: 8px;
+  padding: 9px 12px;
+  border-radius: 13px;
   border: 1px solid rgba(166, 226, 255, 0.16);
   background: rgba(8, 24, 32, 0.88);
   color: #dff3fc;
+  font-family: var(--font-body);
 }
 
 .toggle-chip input {
@@ -376,7 +435,8 @@ body {
 }
 
 .toggle-chip span {
-  font-size: 0.86rem;
+  font-size: 0.82rem;
+  font-weight: 510;
 }
 
 .toggle-chip-enabled {
@@ -388,9 +448,11 @@ body {
   border: 1px solid rgba(166, 226, 255, 0.16);
   background: rgba(8, 24, 32, 0.88);
   color: #dff3fc;
-  border-radius: 14px;
-  padding: 11px 14px;
-  font: inherit;
+  border-radius: 13px;
+  padding: 9px 12px;
+  font-family: var(--font-body);
+  font-size: 0.95rem;
+  font-weight: 520;
   cursor: pointer;
   transition: transform 120ms ease, border-color 120ms ease, background 120ms ease;
 }

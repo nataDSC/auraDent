@@ -24,7 +24,7 @@ type SessionSnapshot = {
   detail: string;
 };
 
-const gatewayUrl = import.meta.env.VITE_GATEWAY_URL ?? 'ws://localhost:8787/realtime/session/browser-client';
+const gatewayUrl = resolveGatewayUrl();
 
 export default function App() {
   const [socketStatus, setSocketStatus] = useState<SocketStatus>('connecting');
@@ -785,4 +785,23 @@ function buildConnectionDetail(socketStatus: SocketStatus, reconnectAttempt: num
 function getReconnectDelayMs(attempt: number) {
   const baseDelay = Math.min(1000 * 2 ** Math.max(0, attempt - 1), 8000);
   return baseDelay;
+}
+
+function resolveGatewayUrl() {
+  const configuredGatewayUrl = import.meta.env.VITE_GATEWAY_URL;
+  if (configuredGatewayUrl) {
+    return configuredGatewayUrl;
+  }
+
+  if (typeof window === 'undefined') {
+    return 'ws://localhost:8787/realtime/session/browser-client';
+  }
+
+  const { host, hostname, port, protocol } = window.location;
+  const isLocalDevHost = hostname === 'localhost' || hostname === '127.0.0.1';
+  if (isLocalDevHost && (port === '5173' || port === '4173')) {
+    return 'ws://localhost:8787/realtime/session/browser-client';
+  }
+
+  return `${protocol === 'https:' ? 'wss' : 'ws'}://${host}/realtime/session/browser-client`;
 }

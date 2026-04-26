@@ -27,6 +27,7 @@ Status legend:
 - `Completed` Add Framer Motion layout and entry animations for transcript and chart cards.
 - `Completed` Connect the UI to the gateway WebSocket.
 - `Completed` Add real microphone capture and browser audio streaming.
+- `Completed` Add deployment-friendly same-origin gateway discovery for single-container demo hosting, while preserving local Vite-to-gateway development defaults.
 - `In Progress` Add production-quality latency and session state UX, including unique per-run session identifiers, explicit empty/deferred extraction guidance, and client-side websocket reconnect handling.
 
 ### Stage 3: Real-time gateway
@@ -76,6 +77,7 @@ Status legend:
 - `Completed` Add worker persistence adapter with PostgreSQL and local-file fallback modes.
 - `In Progress` Harden production PostgreSQL rollout, queue retry semantics, and persisted audit metadata.
 - `Completed` Persist generated post-op instruction artifacts to local storage and capture their storage metadata in persisted records.
+- `Completed` Bootstrap and deploy the AWS async stack in `us-east-1`, including queue, DLQ, Lambda worker, and event source mapping.
 
 ### Stage 7: Verification and hardening
 
@@ -84,6 +86,7 @@ Status legend:
 - `In Progress` Add integration-style tests for gateway extraction gating, session-close replay, and async backend boundaries.
 - `In Progress` Add reconnect handling, retry behavior, and DLQ operational coverage, including client-side websocket recovery with backoff and gateway-side Deepgram reconnect retries.
 - `In Progress` Add observability, audit, metrics validation, and operator-friendly inspection surfaces.
+- `Completed` Add a single-container Hugging Face Docker Space deployment scaffold for the frontend + realtime gateway public demo path.
 
 ## Guiding principles
 
@@ -233,7 +236,8 @@ Status: `In Progress`
 - add reconnect behavior,
 - add DLQ and retry handling,
 - improve trace fidelity,
-- validate observability and audit coverage.
+- validate observability and audit coverage,
+- package the public demo hosting path for single-container deployment.
 
 ## Suggested delivery sequence
 

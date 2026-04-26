@@ -91,6 +91,9 @@ This scaffold now includes a runnable local demo path:
 - `Completed` Findings empty-state guidance that explains when extraction is waiting for an explicit tooth reference.
 - `Completed` Client-side websocket reconnect handling with automatic retry/backoff and clearer recovery messaging in the session deck.
 - `Completed` Gateway-side Deepgram reconnect retries with bounded backoff and trace visibility for transient provider disconnects.
+- `Completed` Same-origin gateway discovery for deployed single-container demos, while preserving the local Vite-to-gateway development default.
+- `Completed` AWS async stack deployment in `us-east-1`, including SQS, DLQ, Lambda worker, and event source mapping.
+- `Completed` Hugging Face Docker Space scaffold for a single-container public demo path covering the frontend and realtime gateway.
 
 ### Run Current Stage
 
@@ -224,6 +227,8 @@ It also now surfaces dedup/provenance details for persisted findings, including:
 - which utterance ids were merged for each deduplicated tooth finding
 
 The detailed stage-by-stage checklist lives in [docs/implementation-plan.md](docs/implementation-plan.md).
+
+For a single-container public demo deployment, see [docs/huggingface-space-deployment.md](docs/huggingface-space-deployment.md).
 
 ## Scripts
 

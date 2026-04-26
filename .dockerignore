@@ -1,0 +1,13 @@
+node_modules
+npm-debug.log*
+dist
+coverage
+.DS_Store
+.env
+.env.local
+.git
+tmp
+cdk.out
+.cdk.staging
+infra/aws/cdk.out
+infra/aws/.cdk.staging

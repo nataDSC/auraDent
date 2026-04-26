@@ -124,7 +124,7 @@ export DEEPGRAM_API_KEY=your_key_here
 export DEEPGRAM_MODEL=nova-3
 export AI_GATEWAY_API_KEY=your_key_here
 export AURADENT_AGENT_MODEL=openai/gpt-4.1-mini
-export AURADENT_AWS_REGION=us-west-2
+export AURADENT_AWS_REGION=us-east-1
 export AURADENT_SESSION_CLOSE_QUEUE_URL=your_queue_url_here
 npm run dev:gateway
 ```
@@ -254,7 +254,7 @@ export DEEPGRAM_API_KEY=your_key_here
 export DEEPGRAM_MODEL=nova-3
 export AI_GATEWAY_API_KEY=your_key_here
 export AURADENT_AGENT_MODEL=openai/gpt-4.1-mini
-export AURADENT_AWS_REGION=us-west-2
+export AURADENT_AWS_REGION=us-east-1
 export AURADENT_SESSION_CLOSE_QUEUE_URL=your_queue_url_here
 npm run dev:gateway
 ```

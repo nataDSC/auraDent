@@ -15,6 +15,38 @@ For the current implementation stage, AWS is used for:
 
 You do not need to manually create the application resources first. The CDK stack in [auradent-async-stack.ts](/Users/nataliep/Documents/New%20project/infra/aws/lib/auradent-async-stack.ts) creates the queue, DLQ, Lambda, and event source mapping.
 
+## What Gets Created
+
+For the current deployment, CDK creates these AuraDent application resources in your AWS account:
+
+- `AuraDentAsyncStack` CloudFormation stack
+- `SessionCloseQueue` SQS queue
+- `SessionCloseDlq` SQS dead-letter queue
+- `SessionWrapWorker` Lambda function
+- Lambda event source mapping from `SessionCloseQueue` to `SessionWrapWorker`
+- Lambda execution role and stack-managed IAM permissions
+- CloudWatch Logs group and streams for the worker
+- CloudFormation outputs:
+  - `SessionCloseQueueUrl`
+  - `SessionCloseQueueArn`
+
+CDK also relies on the standard bootstrap resources in the target account and region:
+
+- CDK asset S3 bucket
+- CDK bootstrap IAM roles
+- CDK bootstrap SSM parameter
+
+For the current phase, the deployment does **not** create:
+
+- RDS, Aurora, or any managed PostgreSQL instance
+- Secrets Manager secrets
+- S3 artifact bucket for post-op PDFs
+- API Gateway
+- VPC, subnets, NAT, or private networking
+- ECS or EC2 resources
+
+If you leave database configuration unset, the worker can still run and write temporary local files inside the Lambda runtime. That is useful for smoke testing the async flow, but it is ephemeral and should not be treated as durable storage.
+
 ## Deployment Checklist
 
 1. Install and verify local tooling.
@@ -34,20 +66,20 @@ aws sts get-caller-identity
 
 4. Choose a deployment region.
 
-The stack currently defaults to `us-west-2` in [auradent.ts](/Users/nataliep/Documents/New%20project/infra/aws/bin/auradent.ts) unless overridden by environment variables.
+The stack currently defaults to `us-east-1` in [auradent.ts](/Users/nataliep/Documents/New%20project/infra/aws/bin/auradent.ts) unless overridden by environment variables.
 
 5. Set local AWS environment variables.
 
 ```bash
 export AWS_PROFILE=your-profile
-export AWS_REGION=us-west-2
-export CDK_DEFAULT_REGION=us-west-2
+export AWS_REGION=us-east-1
+export CDK_DEFAULT_REGION=us-east-1
 ```
 
 6. Bootstrap CDK once per target account and region.
 
 ```bash
-npx cdk bootstrap aws://YOUR_ACCOUNT_ID/us-west-2 --app "tsx infra/aws/bin/auradent.ts"
+npx cdk bootstrap aws://YOUR_ACCOUNT_ID/us-east-1 --app "tsx infra/aws/bin/auradent.ts"
 ```
 
 7. Run a local preflight verification pass.
@@ -74,7 +106,7 @@ You will need:
 10. Point the gateway to the deployed queue.
 
 ```bash
-export AURADENT_AWS_REGION=us-west-2
+export AURADENT_AWS_REGION=us-east-1
 export AURADENT_SESSION_CLOSE_QUEUE_URL=PASTE_QUEUE_URL_HERE
 ```
 

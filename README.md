@@ -163,15 +163,15 @@ npm run run:worker-local -- /absolute/path/to/session-close-payload.json
 
 The gateway now saves each session-close payload locally as well:
 
-- latest payload: [/Users/nataliep/Documents/New project/tmp/session-close/latest-session-close.json](/Users/nataliep/Documents/New%20project/tmp/session-close/latest-session-close.json)
-- per-session payloads: [/Users/nataliep/Documents/New project/tmp/session-close](/Users/nataliep/Documents/New%20project/tmp/session-close)
+- latest payload
+- per-session payloads
 
 You can override that directory with `AURADENT_SESSION_CLOSE_OUTPUT_DIR`.
 
 The quickest local replay command is:
 
 ```bash
-npm run run:worker-local -- "/Users/nataliep/Documents/New project/tmp/session-close/latest-session-close.json"
+npm run run:worker-local -- "<project root>/tmp/session-close/latest-session-close.json"
 ```
 
 With no `AURADENT_DATABASE_URL`, the worker writes to `AURADENT_PERSISTENCE_FILE` or `/tmp/auradent-session-records.jsonl`. With `AURADENT_DATABASE_URL` set, it writes to PostgreSQL instead.
@@ -179,7 +179,7 @@ With no `AURADENT_DATABASE_URL`, the worker writes to `AURADENT_PERSISTENCE_FILE
 Generated post-op PDFs are now also written to disk by the worker. Configure the destination with:
 
 ```bash
-export AURADENT_ARTIFACT_OUTPUT_DIR="/Users/nataliep/Documents/New project/tmp/post-op-instructions"
+export AURADENT_ARTIFACT_OUTPUT_DIR="<project root>/tmp/post-op-instructions"
 ```
 
 If unset, local runs default to `tmp/post-op-instructions` under the repo, while Lambda-style runs default to `/tmp/auradent-post-op`.
@@ -223,7 +223,7 @@ It also now surfaces dedup/provenance details for persisted findings, including:
 - the dedupe resolution policy
 - which utterance ids were merged for each deduplicated tooth finding
 
-The detailed stage-by-stage checklist lives in [docs/implementation-plan.md](/Users/nataliep/Documents/New%20project/docs/implementation-plan.md).
+The detailed stage-by-stage checklist lives in [docs/implementation-plan.md](docs/implementation-plan.md).
 
 ## Scripts
 
@@ -247,7 +247,7 @@ npm run dev:web
 
 The frontend expects the gateway at `ws://localhost:8787/realtime/session/demo-session` by default.
 
-For live transcription, copy from [.env.example](/Users/nataliep/Documents/New%20project/.env.example) or export the variables directly before starting the gateway:
+For live transcription, copy from [.env.example](.env.example) or export the variables directly before starting the gateway:
 
 ```bash
 export DEEPGRAM_API_KEY=your_key_here
@@ -277,10 +277,10 @@ npm run destroy --workspace @auradent/aws-infra
 
 ## Key Deliverables In This Repo
 
-- Product and system design doc: [docs/auradent-design-doc.md](/Users/nataliep/Documents/New%20project/docs/auradent-design-doc.md)
-- Investor-facing brief: [docs/auradent-investor-brief.md](/Users/nataliep/Documents/New%20project/docs/auradent-investor-brief.md)
-- Implementation plan: [docs/implementation-plan.md](/Users/nataliep/Documents/New%20project/docs/implementation-plan.md)
-- AWS deployment guide: [infra/aws/aws_deployment.md](/Users/nataliep/Documents/New%20project/infra/aws/aws_deployment.md)
+- Product and system design doc: [docs/auradent-design-doc.md](docs/auradent-design-doc.md)
+- Investor-facing brief: [docs/auradent-investor-brief.md](docs/auradent-investor-brief.md)
+- Implementation plan: [docs/implementation-plan.md](docs/implementation-plan.md)
+- AWS deployment guide: [infra/aws/aws_deployment.md](infra/aws/aws_deployment.md)
 
 ## MVP Focus
 

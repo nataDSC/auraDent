@@ -191,7 +191,7 @@ To inspect one session:
 npm run readback:worker-local -- demo-session
 ```
 
-The checked-in SQL migration lives at [001_create_auradent_session_records.sql](/Users/nataliep/Documents/New%20project/apps/worker/sql/001_create_auradent_session_records.sql).
+The checked-in SQL migration lives at [001_create_auradent_session_records.sql](apps/worker/sql/001_create_auradent_session_records.sql).
 
 ## Teardown
 

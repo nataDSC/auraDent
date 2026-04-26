@@ -89,6 +89,7 @@ This scaffold now includes a runnable local demo path:
 - `Completed` Clearer latency surfacing in the UI, including explicit `TTFT` and `Finalization latency` metrics.
 - `Completed` Findings empty-state guidance that explains when extraction is waiting for an explicit tooth reference.
 - `Completed` Client-side websocket reconnect handling with automatic retry/backoff and clearer recovery messaging in the session deck.
+- `Completed` Gateway-side Deepgram reconnect retries with bounded backoff and trace visibility for transient provider disconnects.
 
 ### Run Current Stage
 

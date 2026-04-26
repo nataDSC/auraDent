@@ -14,6 +14,11 @@ import { existsSync, readFileSync } from 'node:fs';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import WebSocket from 'ws';
+import {
+  getDeepgramReconnectDelayMs,
+  MAX_DEEPGRAM_RETRY_ATTEMPTS,
+  shouldRetryDeepgramSession,
+} from './deepgram-retry';
 import { hasClinicalSignal, isReadyForStructuredExtraction } from './extraction-gating';
 import { buildSessionClosePayload, writeSessionClosePayloadToDisk } from './session-close';
 import { reconcileTranscriptRevision, type TranscriptRevisionStore } from './transcript-revisions';
@@ -24,9 +29,12 @@ type GatewaySessionState = {
   activeSessionId?: string;
   audioInterval?: NodeJS.Timeout;
   autoPersistToPostgres: boolean;
+  deepgramReconnectAttempt: number;
+  deepgramReconnectTimer?: NodeJS.Timeout;
   deepgramSocket?: WebSocket;
   deepgramKeepAlive?: NodeJS.Timeout;
   deepgramOpenedAt?: number;
+  liveAudioSampleRate?: number;
   completedExtractionSequence: number;
   extractionChain: Promise<void>;
   extractionSequence: number;
@@ -107,6 +115,7 @@ app.register(async (instance) => {
       transcriptCounter: 0,
       demoTimers: [],
       autoPersistToPostgres: false,
+      deepgramReconnectAttempt: 0,
       hasEmittedTtft: false,
       extractionChain: Promise.resolve(),
       extractionSequence: 0,
@@ -395,6 +404,38 @@ function startLiveSession({
   sessionId: string;
   state: GatewaySessionState;
 }) {
+  state.liveAudioSampleRate = audioSampleRate;
+  connectDeepgramSession({
+    audioSampleRate,
+    request,
+    send,
+    sendTrace,
+    sessionId,
+    state,
+    isRetry: state.deepgramReconnectAttempt > 0,
+  });
+}
+
+function connectDeepgramSession({
+  audioSampleRate,
+  request,
+  send,
+  sendTrace,
+  sessionId,
+  state,
+  isRetry,
+}: {
+  audioSampleRate: number;
+  request: FastifyRequest;
+  send: (event: RealtimeEvent) => void;
+  sendTrace: (step: string, detail: string, confidence?: number) => void;
+  sessionId: string;
+  state: GatewaySessionState;
+  isRetry: boolean;
+}) {
+  clearTimeout(state.deepgramReconnectTimer);
+  state.deepgramReconnectTimer = undefined;
+
   const deepgramUrl = new URL('wss://api.deepgram.com/v1/listen');
   deepgramUrl.searchParams.set('model', process.env.DEEPGRAM_MODEL ?? 'nova-3');
   deepgramUrl.searchParams.set('language', 'en-US');
@@ -416,7 +457,14 @@ function startLiveSession({
   state.lastAudioAt = Date.now();
 
   deepgramSocket.on('open', () => {
-    sendTrace('deepgram.connected', 'Deepgram live transcription websocket opened.', 0.99);
+    state.deepgramReconnectAttempt = 0;
+    sendTrace(
+      isRetry ? 'deepgram.reconnected' : 'deepgram.connected',
+      isRetry
+        ? 'Deepgram live transcription websocket recovered after a transient disconnect.'
+        : 'Deepgram live transcription websocket opened.',
+      0.99,
+    );
 
     state.deepgramKeepAlive = setInterval(() => {
       if (!state.deepgramSocket || state.deepgramSocket.readyState !== WebSocket.OPEN) {
@@ -527,10 +575,57 @@ function startLiveSession({
   });
 
   deepgramSocket.on('close', () => {
+    if (state.deepgramSocket !== deepgramSocket) {
+      return;
+    }
+
     sendTrace('deepgram.closed', 'Deepgram live transcription websocket closed.', 0.92);
     clearInterval(state.deepgramKeepAlive);
     state.deepgramKeepAlive = undefined;
     state.deepgramSocket = undefined;
+
+    if (
+      shouldRetryDeepgramSession({
+        attempt: state.deepgramReconnectAttempt,
+        hasAudioSampleRate: typeof state.liveAudioSampleRate === 'number',
+        isStopping: state.isStopping,
+      })
+    ) {
+      const nextAttempt = state.deepgramReconnectAttempt + 1;
+      state.deepgramReconnectAttempt = nextAttempt;
+      const delayMs = getDeepgramReconnectDelayMs(nextAttempt);
+
+      sendTrace(
+        'deepgram.reconnecting',
+        `Retrying Deepgram live transcription connection in ${delayMs}ms (attempt ${nextAttempt}/${MAX_DEEPGRAM_RETRY_ATTEMPTS}).`,
+        0.74,
+      );
+
+      state.deepgramReconnectTimer = setTimeout(() => {
+        if (typeof state.liveAudioSampleRate !== 'number') {
+          return;
+        }
+
+        connectDeepgramSession({
+          audioSampleRate: state.liveAudioSampleRate,
+          request,
+          send,
+          sendTrace,
+          sessionId,
+          state,
+          isRetry: true,
+        });
+      }, delayMs);
+      return;
+    }
+
+    if (!state.isStopping && typeof state.liveAudioSampleRate === 'number') {
+      sendTrace(
+        'deepgram.retry_exhausted',
+        'Deepgram live transcription could not be recovered automatically. Stop and restart the session to continue.',
+        0.28,
+      );
+    }
   });
 }
 
@@ -637,6 +732,7 @@ function finalizeDeepgram(state: GatewaySessionState) {
 
 function teardownSession(state: GatewaySessionState) {
   stopDemoSession(state);
+  clearTimeout(state.deepgramReconnectTimer);
   clearInterval(state.deepgramKeepAlive);
 
   if (state.deepgramSocket) {
@@ -658,6 +754,8 @@ function stopDemoSession(state: GatewaySessionState) {
 function resetSessionArtifacts(state: GatewaySessionState) {
   state.completedExtractionSequence = 0;
   state.deepgramOpenedAt = undefined;
+  state.deepgramReconnectAttempt = 0;
+  state.liveAudioSampleRate = undefined;
   state.extractionChain = Promise.resolve();
   state.extractionSequence = 0;
   state.hasEmittedTtft = false;

@@ -34,7 +34,7 @@ Status legend:
 - `Completed` Create the Fastify gateway scaffold with health and WebSocket endpoints.
 - `Completed` Add a mocked transcript/event streaming loop for local demo use.
 - `Completed` Emit transcript, trace, chart, and metric events to the frontend.
-- `In Progress` Shape the gateway around the intended session lifecycle and event model.
+- `In Progress` Shape the gateway around the intended session lifecycle and event model, including transient Deepgram reconnect/retry handling.
 - `Completed` Add browser audio chunk ingestion.
 - `In Progress` Add Deepgram streaming integration.
 - `In Progress` Add transcript revision reconciliation for provider partials and finals.
@@ -81,7 +81,7 @@ Status legend:
 - `In Progress` Install dependencies and run full workspace verification.
 - `In Progress` Add unit tests for schemas, normalization, transcript revision logic, and worker persistence.
 - `In Progress` Add integration-style tests for gateway extraction gating, session-close replay, and async backend boundaries.
-- `In Progress` Add reconnect handling, retry behavior, and DLQ operational coverage, including client-side websocket recovery with backoff.
+- `In Progress` Add reconnect handling, retry behavior, and DLQ operational coverage, including client-side websocket recovery with backoff and gateway-side Deepgram reconnect retries.
 - `In Progress` Add observability, audit, metrics validation, and operator-friendly inspection surfaces.
 
 ## Guiding principles

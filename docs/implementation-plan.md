@@ -73,7 +73,8 @@ Status legend:
 - `Completed` Add mock insurance pre-authorization flow stub in the worker.
 - `Completed` Add persistence-ready enriched session record assembly in the worker.
 - `Completed` Add worker persistence adapter with PostgreSQL and local-file fallback modes.
-- `In Progress` Harden production PostgreSQL rollout, artifact persistence, queue retry semantics, and persisted audit metadata.
+- `In Progress` Harden production PostgreSQL rollout, queue retry semantics, and persisted audit metadata.
+- `Completed` Persist generated post-op instruction artifacts to local storage and capture their storage metadata in persisted records.
 
 ### Stage 7: Verification and hardening
 

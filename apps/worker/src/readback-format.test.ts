@@ -28,6 +28,11 @@ test('buildReadbackResponse surfaces audit-friendly summaries', () => {
       byteLength: 420,
       previewText: 'AuraDent Post-Op Instructions',
       sha256Digest: 'a'.repeat(64),
+      storage: {
+        persistedAt: '2026-04-25T04:37:29.000Z',
+        storageKind: 'filesystem',
+        outputPath: '/tmp/auradent/post-op-demo-session.pdf',
+      },
     },
     insurancePreAuthorization: {
       requestId: 'preauth-demo-session',
@@ -70,6 +75,7 @@ test('buildReadbackResponse surfaces audit-friendly summaries', () => {
   );
 
   assert.equal(response.count, 1);
+  assert.equal(response.summaries[0]?.artifactOutputPath, '/tmp/auradent/post-op-demo-session.pdf');
   assert.equal(response.summaries[0]?.sessionId, 'demo-session');
   assert.equal(response.summaries[0]?.findingsCount, 1);
   assert.equal(response.summaries[0]?.runtime, 'local');
@@ -111,6 +117,7 @@ test('buildReadbackResponse tolerates older persisted records without source art
   );
 
   assert.equal(response.count, 1);
+  assert.equal(response.summaries[0]?.artifactOutputPath, null);
   assert.equal(response.summaries[0]?.sessionId, 'legacy-session');
   assert.equal(response.summaries[0]?.traceEventCount, 0);
   assert.equal(response.summaries[0]?.metricCount, 0);

@@ -56,6 +56,11 @@ export type PersistableSessionRecord = {
     byteLength: number;
     previewText: string;
     sha256Digest: string;
+    storage?: {
+      persistedAt: string;
+      storageKind: 'filesystem';
+      outputPath: string;
+    };
   };
   insurancePreAuthorization: MockInsurancePreAuthResult;
   observability: {
@@ -127,9 +132,14 @@ export function buildPersistableSessionRecord(args: {
   payload: SessionClosePayload;
   normalizedFindings: NormalizedPerioRecord[];
   postOpInstruction: PostOpInstructionArtifact;
+  persistedPostOpInstruction?: {
+    persistedAt: string;
+    storageKind: 'filesystem';
+    outputPath: string;
+  };
   insurancePreAuthorization: MockInsurancePreAuthResult;
 }): PersistableSessionRecord {
-  const { payload, normalizedFindings, postOpInstruction, insurancePreAuthorization } = args;
+  const { payload, normalizedFindings, postOpInstruction, insurancePreAuthorization, persistedPostOpInstruction } = args;
 
   return {
     sessionId: payload.sessionId,
@@ -143,6 +153,7 @@ export function buildPersistableSessionRecord(args: {
       byteLength: postOpInstruction.byteLength,
       previewText: postOpInstruction.previewText,
       sha256Digest: postOpInstruction.sha256Digest,
+      storage: persistedPostOpInstruction,
     },
     insurancePreAuthorization,
     observability: {
@@ -152,47 +163,87 @@ export function buildPersistableSessionRecord(args: {
 }
 
 function createStubPdfBuffer(text: string) {
-  const sanitizedText = text.replace(/[()\\]/g, '');
-  const pdf = `%PDF-1.4
-1 0 obj
-<< /Type /Catalog /Pages 2 0 R >>
-endobj
-2 0 obj
-<< /Type /Pages /Kids [3 0 R] /Count 1 >>
-endobj
-3 0 obj
-<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>
-endobj
-4 0 obj
-<< /Length 86 >>
-stream
-BT
-/F1 12 Tf
-72 720 Td
-(${sanitizedText.slice(0, 240)}) Tj
-ET
-endstream
-endobj
-5 0 obj
-<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>
-endobj
-xref
-0 6
-0000000000 65535 f 
-0000000010 00000 n 
-0000000063 00000 n 
-0000000122 00000 n 
-0000000248 00000 n 
-0000000386 00000 n 
-trailer
-<< /Root 1 0 R /Size 6 >>
-startxref
-456
-%%EOF`;
+  const wrappedLines = wrapTextForPdf(text, 64).slice(0, 12);
+  const contentStream = [
+    'BT',
+    '/F1 12 Tf',
+    '72 720 Td',
+    '16 TL',
+    ...wrappedLines.flatMap((line, index) =>
+      index === 0 ? [`(${escapePdfText(line)}) Tj`] : ['T*', `(${escapePdfText(line)}) Tj`],
+    ),
+    'ET',
+  ].join('\n');
 
-  return Buffer.from(pdf, 'utf8');
+  const objects = [
+    '1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj',
+    '2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj',
+    '3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R /Resources << /Font << /F1 5 0 R >> >> >>\nendobj',
+    `4 0 obj\n<< /Length ${Buffer.byteLength(contentStream, 'utf8')} >>\nstream\n${contentStream}\nendstream\nendobj`,
+    '5 0 obj\n<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>\nendobj',
+  ];
+
+  const chunks = ['%PDF-1.4'];
+  const offsets = [0];
+
+  for (const object of objects) {
+    offsets.push(Buffer.byteLength(chunks.join('\n'), 'utf8') + 1);
+    chunks.push(object);
+  }
+
+  const xrefOffset = Buffer.byteLength(chunks.join('\n') + '\n', 'utf8');
+  const xref = [
+    'xref',
+    `0 ${objects.length + 1}`,
+    '0000000000 65535 f ',
+    ...offsets.slice(1).map((offset) => `${String(offset).padStart(10, '0')} 00000 n `),
+    'trailer',
+    `<< /Root 1 0 R /Size ${objects.length + 1} >>`,
+    'startxref',
+    String(xrefOffset),
+    '%%EOF',
+  ].join('\n');
+
+  return Buffer.from(`${chunks.join('\n')}\n${xref}`, 'utf8');
 }
 
 function createSha256Digest(value: string | Buffer) {
   return createHash('sha256').update(value).digest('hex');
+}
+
+function wrapTextForPdf(text: string, maxLineLength: number) {
+  const paragraphs = text.split('\n');
+  const wrapped: string[] = [];
+
+  for (const paragraph of paragraphs) {
+    const words = paragraph.trim().split(/\s+/).filter(Boolean);
+    if (words.length === 0) {
+      wrapped.push('');
+      continue;
+    }
+
+    let currentLine = '';
+    for (const word of words) {
+      const nextLine = currentLine ? `${currentLine} ${word}` : word;
+      if (nextLine.length <= maxLineLength) {
+        currentLine = nextLine;
+        continue;
+      }
+
+      if (currentLine) {
+        wrapped.push(currentLine);
+      }
+      currentLine = word;
+    }
+
+    if (currentLine) {
+      wrapped.push(currentLine);
+    }
+  }
+
+  return wrapped;
+}
+
+function escapePdfText(value: string) {
+  return value.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
 }

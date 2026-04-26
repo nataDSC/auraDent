@@ -8,6 +8,7 @@ import {
 import { createHash } from 'node:crypto';
 import { AgentExtractionSchema, type SessionClosePayload } from '@auradent/shared';
 import { createSessionPersistenceAdapter, type SessionPersistenceAdapter } from './persistence';
+import { persistPostOpInstructionArtifact } from './artifact-store';
 
 export type ProcessedSessionCloseSummary = {
   findings: number;
@@ -41,11 +42,16 @@ export async function processSessionClosePayload(
 
   const normalized = normalizeExtraction(extraction);
   const postOpInstruction = generatePostOpInstructionArtifact(payload, normalized);
+  const persistedPostOpInstruction = await persistPostOpInstructionArtifact({
+    artifact: postOpInstruction,
+    context,
+  });
   const insurancePreAuthorization = simulateInsurancePreAuthorization(payload, normalized);
   const persistableRecord = buildPersistableSessionRecord({
     payload,
     normalizedFindings: normalized,
     postOpInstruction,
+    persistedPostOpInstruction,
     insurancePreAuthorization,
   });
   attachProcessingObservability({

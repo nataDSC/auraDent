@@ -16,6 +16,7 @@ export type PersistedSessionRow = {
 };
 
 export type ReadbackSummary = {
+  artifactOutputPath: string | null;
   sessionId: string;
   patientId: string;
   closedAt: string;
@@ -58,6 +59,9 @@ export function summarizePersistedSessionRow(row: PersistedSessionRow): Readback
       : 'unavailable';
 
   return {
+    artifactOutputPath: typeof row.record.postOpInstruction?.storage?.outputPath === 'string'
+      ? row.record.postOpInstruction.storage.outputPath
+      : null,
     sessionId: row.session_id,
     patientId: row.patient_id,
     closedAt: row.closed_at,

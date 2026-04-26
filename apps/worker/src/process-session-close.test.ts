@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, readFile } from 'node:fs/promises';
+import { mkdtemp, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 import type { SessionClosePayload } from '@auradent/shared';
@@ -10,9 +10,11 @@ import { processSessionClosePayload } from './process-session-close';
 test('processSessionClosePayload persists to local JSONL fallback and returns summary', async () => {
   const tempDir = await mkdtemp(path.join(tmpdir(), 'auradent-worker-test-'));
   const persistenceFile = path.join(tempDir, 'session-records.jsonl');
+  const artifactDir = path.join(tempDir, 'artifacts');
 
   delete process.env.AURADENT_DATABASE_URL;
   process.env.AURADENT_PERSISTENCE_FILE = persistenceFile;
+  process.env.AURADENT_ARTIFACT_OUTPUT_DIR = artifactDir;
 
   const payload: SessionClosePayload = {
     sessionId: 'test-session',
@@ -62,15 +64,20 @@ test('processSessionClosePayload persists to local JSONL fallback and returns su
       };
     };
     sessionId: string;
-    postOpInstruction: { fileName: string };
+    postOpInstruction: { fileName: string; storage?: { outputPath: string; storageKind: string } };
     insurancePreAuthorization: { status: string };
   };
 
   assert.equal(persisted.sessionId, 'test-session');
   assert.equal(persisted.postOpInstruction.fileName, 'post-op-test-session.pdf');
   assert.equal(persisted.insurancePreAuthorization.status, 'approved');
+  assert.equal(persisted.postOpInstruction.storage?.storageKind, 'filesystem');
+  assert.match(persisted.postOpInstruction.storage?.outputPath ?? '', /post-op-test-session\.pdf$/);
   assert.equal(persisted.observability.processing.runtime, 'local');
   assert.equal(persisted.observability.processing.persistenceMode, 'local-file');
   assert.match(persisted.observability.processing.payloadSha256, /^[a-f0-9]{64}$/);
   assert.match(persisted.observability.processing.recordSha256, /^[a-f0-9]{64}$/);
+
+  const artifactStats = await stat(persisted.postOpInstruction.storage!.outputPath);
+  assert.ok(artifactStats.size > 0);
 });

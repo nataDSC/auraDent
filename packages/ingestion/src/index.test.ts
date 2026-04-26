@@ -76,6 +76,11 @@ test('buildPersistableSessionRecord assembles artifact and insurance metadata', 
     payload,
     normalizedFindings: normalized,
     postOpInstruction,
+    persistedPostOpInstruction: {
+      persistedAt: '2026-04-25T12:00:01.000Z',
+      storageKind: 'filesystem',
+      outputPath: '/tmp/post-op-session-123.pdf',
+    },
     insurancePreAuthorization: insurance,
   });
 
@@ -87,6 +92,45 @@ test('buildPersistableSessionRecord assembles artifact and insurance metadata', 
   assert.equal(record.insurancePreAuthorization.status, 'approved');
   assert.equal(record.postOpInstruction.fileName, 'post-op-session-123.pdf');
   assert.match(record.postOpInstruction.sha256Digest, /^[a-f0-9]{64}$/);
+  assert.equal(record.postOpInstruction.storage?.outputPath, '/tmp/post-op-session-123.pdf');
   assert.equal(record.normalizedFindings[0]?.toothNumber, 14);
   assert.equal(record.observability.sourceArtifacts.trace.length, 1);
+});
+
+test('generatePostOpInstructionArtifact wraps PDF text across multiple lines', () => {
+  const payload: SessionClosePayload = {
+    sessionId: 'session-wrap',
+    patientId: 'patient-wrap',
+    closedAt: '2026-04-25T12:00:00.000Z',
+    transcript: {
+      finalText:
+        'Patient has detailed follow-up instructions requiring enough content to exceed a single line in the PDF stub.',
+    },
+    structuredFindings: [
+      {
+        toothNumber: 14,
+        probingDepthMm: 4,
+        bleedingOnProbing: true,
+        confidence: 0.97,
+        sourceUtteranceId: 'utt-wrap',
+      },
+    ],
+    artifacts: {
+      trace: [],
+      metrics: [],
+    },
+  };
+
+  const normalized = normalizeExtraction({
+    sessionId: payload.sessionId,
+    patientId: payload.patientId,
+    requiresReview: false,
+    noteSummary: payload.transcript.finalText,
+    findings: payload.structuredFindings,
+  });
+  const postOpInstruction = generatePostOpInstructionArtifact(payload, normalized);
+  const decodedPdf = Buffer.from(postOpInstruction.contentBase64, 'base64').toString('utf8');
+
+  assert.match(decodedPdf, /16 TL/);
+  assert.match(decodedPdf, /T\*/);
 });

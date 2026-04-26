@@ -80,6 +80,7 @@ This scaffold now includes a runnable local demo path:
 - `In Progress` Vercel AI SDK orchestration with mock practice-management tools and heuristic fallback.
 - `In Progress` AWS deployment wiring from queue to bundled worker artifact, pending dependency install and `cdk` deployment.
 - `In Progress` Production PostgreSQL rollout, downstream artifact persistence hardening, and async retry/DLQ behavior.
+- `Completed` Worker now persists generated post-op PDF artifacts to the local filesystem and records their storage paths for inspection.
 - `In Progress` Early unit and integration-style coverage for gateway, ingestion, and worker persistence paths.
 - `In Progress` Worker-side audit metadata for processing duration, receive counts, and payload/record integrity hashes.
 - `In Progress` Frontend session-state polish and operator-friendly persisted-record readback summaries.
@@ -170,6 +171,14 @@ npm run run:worker-local -- "/Users/nataliep/Documents/New project/tmp/session-c
 
 With no `AURADENT_DATABASE_URL`, the worker writes to `AURADENT_PERSISTENCE_FILE` or `/tmp/auradent-session-records.jsonl`. With `AURADENT_DATABASE_URL` set, it writes to PostgreSQL instead.
 
+Generated post-op PDFs are now also written to disk by the worker. Configure the destination with:
+
+```bash
+export AURADENT_ARTIFACT_OUTPUT_DIR="/Users/nataliep/Documents/New project/tmp/post-op-instructions"
+```
+
+If unset, local runs default to `tmp/post-op-instructions` under the repo, while Lambda-style runs default to `/tmp/auradent-post-op`.
+
 The UI now also includes a `Write to Postgres on Stop` toggle for local development. When enabled, the gateway will try to run the local worker persistence path automatically after `Stop`. For that to succeed, the gateway process itself must be started with:
 
 ```bash
@@ -200,6 +209,8 @@ For a full raw persisted record payload, add `--full`:
 ```bash
 npm run readback:worker-local -- demo-session --full
 ```
+
+The readback summary now includes the stored post-op artifact path when one is available.
 
 The detailed stage-by-stage checklist lives in [docs/implementation-plan.md](/Users/nataliep/Documents/New%20project/docs/implementation-plan.md).
 

@@ -12,9 +12,11 @@ test('gateway payload replay flows through worker persistence end to end', async
   const tempDir = await mkdtemp(path.join(tmpdir(), 'auradent-replay-'));
   const payloadDirectory = path.join(tempDir, 'session-close');
   const persistenceFile = path.join(tempDir, 'persisted-records.jsonl');
+  const artifactDirectory = path.join(tempDir, 'artifacts');
 
   delete process.env.AURADENT_DATABASE_URL;
   process.env.AURADENT_PERSISTENCE_FILE = persistenceFile;
+  process.env.AURADENT_ARTIFACT_OUTPUT_DIR = artifactDirectory;
 
   const payload = buildSessionClosePayload({
     sessionId: 'replay-session',
@@ -89,13 +91,14 @@ test('gateway payload replay flows through worker persistence end to end', async
         runtime: string;
       };
     };
-    postOpInstruction: { fileName: string };
+    postOpInstruction: { fileName: string; storage?: { outputPath: string } };
     transcript: { finalText: string };
   };
 
   assert.equal(persisted.normalizedFindings[0]?.toothNumber, 14);
   assert.equal(persisted.normalizedFindings[0]?.bleedingOnProbing, true);
   assert.equal(persisted.postOpInstruction.fileName, 'post-op-replay-session.pdf');
+  assert.match(persisted.postOpInstruction.storage?.outputPath ?? '', /post-op-replay-session\.pdf$/);
   assert.match(persisted.transcript.finalText, /\[PATIENT_NAME\]/);
   assert.equal(persisted.observability.processing.runtime, 'local');
   assert.match(persisted.observability.processing.payloadSha256, /^[a-f0-9]{64}$/);

@@ -36,8 +36,61 @@ test('normalizeExtraction maps findings into persistence-ready records', () => {
       bleedingOnProbing: true,
       sourceUtteranceId: 'utt-14',
       confidence: 0.97,
+      provenance: {
+        dedupeKey: 'tooth-14',
+        duplicateCount: 0,
+        mergedSourceUtteranceIds: ['utt-14'],
+        resolution: 'highest-confidence-then-latest',
+      },
     },
   ]);
+});
+
+test('normalizeExtraction dedupes revised findings for the same tooth and preserves provenance', () => {
+  const extraction: AgentExtraction = {
+    sessionId: 'session-456',
+    patientId: 'patient-xyz',
+    requiresReview: false,
+    noteSummary: 'Patient has revised perio findings on tooth 14.',
+    findings: [
+      {
+        toothNumber: 14,
+        probingDepthMm: 3,
+        bleedingOnProbing: false,
+        confidence: 0.71,
+        sourceUtteranceId: 'utt-1000',
+      },
+      {
+        toothNumber: 14,
+        probingDepthMm: 4,
+        bleedingOnProbing: true,
+        confidence: 0.95,
+        sourceUtteranceId: 'utt-2000',
+      },
+      {
+        toothNumber: 14,
+        probingDepthMm: 4,
+        bleedingOnProbing: false,
+        confidence: 0.91,
+        sourceUtteranceId: 'utt-1500',
+      },
+    ],
+  };
+
+  const normalized = normalizeExtraction(extraction);
+
+  assert.equal(normalized.length, 1);
+  assert.equal(normalized[0]?.toothNumber, 14);
+  assert.equal(normalized[0]?.probingDepthMm, 4);
+  assert.equal(normalized[0]?.bleedingOnProbing, true);
+  assert.equal(normalized[0]?.confidence, 0.95);
+  assert.equal(normalized[0]?.sourceUtteranceId, 'utt-2000');
+  assert.deepEqual(normalized[0]?.provenance, {
+    dedupeKey: 'tooth-14',
+    duplicateCount: 2,
+    mergedSourceUtteranceIds: ['utt-1000', 'utt-1500', 'utt-2000'],
+    resolution: 'highest-confidence-then-latest',
+  });
 });
 
 test('buildPersistableSessionRecord assembles artifact and insurance metadata', () => {

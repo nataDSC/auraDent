@@ -74,6 +74,7 @@ This scaffold now includes a runnable local demo path:
 - `Completed` Worker enrichment stubs for post-op PDF generation, mock insurance pre-authorization, and persistence-ready session record assembly.
 - `Completed` Worker persistence adapter with PostgreSQL write path and local JSONL fallback for development.
 - `Completed` Local replay loop for session-close payloads, including saved gateway payload snapshots and worker readback/migration utilities.
+- `Completed` Ingestion-layer deduplication for revised findings on the same tooth, with merged utterance provenance recorded in persisted findings.
 - `In Progress` Dependency installation and full workspace verification.
 - `In Progress` Deepgram live transcription wiring and end-to-end session lifecycle shape.
 - `In Progress` Transcript revision reconciliation for partial/final provider updates in the realtime gateway.

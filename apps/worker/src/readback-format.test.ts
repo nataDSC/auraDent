@@ -20,6 +20,12 @@ test('buildReadbackResponse surfaces audit-friendly summaries', () => {
         bleedingOnProbing: false,
         sourceUtteranceId: 'utt-14',
         confidence: 0.98,
+        provenance: {
+          dedupeKey: 'tooth-14',
+          duplicateCount: 0,
+          mergedSourceUtteranceIds: ['utt-14'],
+          resolution: 'highest-confidence-then-latest',
+        },
       },
     ],
     postOpInstruction: {

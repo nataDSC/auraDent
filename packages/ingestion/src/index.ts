@@ -9,10 +9,16 @@ export type NormalizedPerioRecord = {
   bleedingOnProbing: boolean;
   sourceUtteranceId: string;
   confidence: number;
+  provenance: {
+    dedupeKey: string;
+    duplicateCount: number;
+    mergedSourceUtteranceIds: string[];
+    resolution: 'highest-confidence-then-latest';
+  };
 };
 
 export function normalizeExtraction(extraction: AgentExtraction): NormalizedPerioRecord[] {
-  return extraction.findings.map((finding) => ({
+  const candidates = extraction.findings.map((finding) => ({
     sessionId: extraction.sessionId,
     patientId: extraction.patientId,
     toothNumber: finding.toothNumber,
@@ -21,6 +27,8 @@ export function normalizeExtraction(extraction: AgentExtraction): NormalizedPeri
     sourceUtteranceId: finding.sourceUtteranceId,
     confidence: finding.confidence,
   }));
+
+  return dedupeNormalizedFindings(candidates);
 }
 
 export type PostOpInstructionArtifact = {
@@ -246,4 +254,66 @@ function wrapTextForPdf(text: string, maxLineLength: number) {
 
 function escapePdfText(value: string) {
   return value.replace(/\\/g, '\\\\').replace(/\(/g, '\\(').replace(/\)/g, '\\)');
+}
+
+function dedupeNormalizedFindings(
+  findings: Array<Omit<NormalizedPerioRecord, 'provenance'>>,
+): NormalizedPerioRecord[] {
+  const grouped = new Map<string, Array<Omit<NormalizedPerioRecord, 'provenance'>>>();
+
+  for (const finding of findings) {
+    const key = `tooth-${finding.toothNumber}`;
+    grouped.set(key, [...(grouped.get(key) ?? []), finding]);
+  }
+
+  return Array.from(grouped.entries())
+    .map(([dedupeKey, group]) => {
+      const winner = group.reduce(selectPreferredFinding);
+      const mergedSourceUtteranceIds = Array.from(
+        new Set(group.map((finding) => finding.sourceUtteranceId)),
+      ).sort(compareUtteranceIds);
+
+      return {
+        ...winner,
+        bleedingOnProbing: group.some((finding) => finding.bleedingOnProbing),
+        provenance: {
+          dedupeKey,
+          duplicateCount: Math.max(0, group.length - 1),
+          mergedSourceUtteranceIds,
+          resolution: 'highest-confidence-then-latest' as const,
+        },
+      };
+    })
+    .sort((left, right) => left.toothNumber - right.toothNumber);
+}
+
+function selectPreferredFinding(
+  current: Omit<NormalizedPerioRecord, 'provenance'>,
+  candidate: Omit<NormalizedPerioRecord, 'provenance'>,
+) {
+  if (candidate.confidence !== current.confidence) {
+    return candidate.confidence > current.confidence ? candidate : current;
+  }
+
+  const utteranceComparison = compareUtteranceIds(candidate.sourceUtteranceId, current.sourceUtteranceId);
+  if (utteranceComparison !== 0) {
+    return utteranceComparison > 0 ? candidate : current;
+  }
+
+  const currentHasDepth = typeof current.probingDepthMm === 'number';
+  const candidateHasDepth = typeof candidate.probingDepthMm === 'number';
+  if (candidateHasDepth !== currentHasDepth) {
+    return candidateHasDepth ? candidate : current;
+  }
+
+  return candidate;
+}
+
+function compareUtteranceIds(left: string, right: string) {
+  return extractUtteranceRank(left) - extractUtteranceRank(right);
+}
+
+function extractUtteranceRank(utteranceId: string) {
+  const match = utteranceId.match(/(\d+)(?!.*\d)/);
+  return match ? Number(match[1]) : 0;
 }

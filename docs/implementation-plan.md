@@ -56,9 +56,9 @@ Status legend:
 
 - `Completed` Create the `ingestion` package boundary.
 - `Completed` Add normalization logic from structured findings into persistence-ready records.
-- `Planned` Add deduplication across transcript revisions and partial/final updates.
+- `Completed` Add deduplication across transcript revisions and partial/final updates.
 - `Completed` Add canonical persistence-ready session record DTOs and worker write adapters for PostgreSQL and local replay.
-- `In Progress` Add provenance and replay support for normalized records.
+- `In Progress` Add provenance and replay support for normalized records, including merged utterance provenance on deduplicated findings.
 
 ### Stage 6: Async backend
 

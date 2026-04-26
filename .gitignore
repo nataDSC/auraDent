@@ -6,3 +6,7 @@ dist
 coverage
 *.log
 tmp
+cdk.out
+.cdk.staging
+infra/aws/cdk.out
+infra/aws/.cdk.staging

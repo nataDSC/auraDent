@@ -4,7 +4,7 @@ AuraDent is a real-time dental documentation platform that turns live chairside 
 
 This repository is scaffolded as a TypeScript monorepo with separate surfaces for the ambient frontend, the real-time gateway, the agentic extraction layer, the normalization service, and AWS-based wrap-up processing.
 
-(When demo requested, it will be started at public deployment of the application on AWS (backend) and Hugging Face (frontend):[ AuraDent Ambient Clinical Terminal ](https://maarseek-aura-dent.hf.space/))
+(When demo requested, it will be started on AWS (backend) and Hugging Face (frontend):[ AuraDent Ambient Clinical Terminal ](https://maarseek-aura-dent.hf.space/))
 
 ## What AuraDent Does
 
